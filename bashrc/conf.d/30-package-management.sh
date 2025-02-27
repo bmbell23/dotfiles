@@ -26,7 +26,7 @@ pkg() {
     esac
 }
 
-# Add tab completion for pkg command
+# Package management completion
 _pkg_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"

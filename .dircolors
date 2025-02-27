@@ -1,0 +1,95 @@
+# Configuration file for dircolors
+# Colored ls output
+
+# Below are TERM entries, which can be a glob patterns, to match
+# against the TERM environment variable to determine if it is colorizable.
+TERM Eterm
+TERM ansi
+TERM *color*
+TERM con[0-9]*x[0-9]*
+TERM cons25
+TERM console
+TERM cygwin
+TERM dtterm
+TERM gnome
+TERM hurd
+TERM jfbterm
+TERM konsole
+TERM kterm
+TERM linux
+TERM linux-c
+TERM mlterm
+TERM putty
+TERM rxvt*
+TERM screen*
+TERM st
+TERM terminator
+TERM tmux*
+TERM vt100
+TERM xterm*
+
+# Basic file types
+NORMAL 00
+FILE 00
+DIR 01;34
+LINK 01;36
+FIFO 40;33
+SOCK 01;35
+DOOR 01;35
+BLK 40;33;01
+CHR 40;33;01
+ORPHAN 40;31;01
+MISSING 00
+EXEC 01;32
+
+# Archives or compressed
+.tar 01;31
+.tgz 01;31
+.zip 01;31
+.gz  01;31
+.bz2 01;31
+.rar 01;31
+.7z  01;31
+
+# Image formats
+.jpg 01;35
+.jpeg 01;35
+.gif 01;35
+.bmp 01;35
+.png 01;35
+.svg 01;35
+
+# Video formats
+.mov 01;35
+.mpg 01;35
+.mpeg 01;35
+.mp4 01;35
+.mkv 01;35
+.webm 01;35
+
+# Audio formats
+.mp3 00;36
+.wav 00;36
+.flac 00;36
+.m4a 00;36
+
+# Programming
+.c 00;32
+.cpp 00;32
+.py 00;32
+.rb 00;32
+.js 00;32
+.java 00;32
+.sh 00;32
+.pl 00;32
+.php 00;32
+.h 00;32
+.hpp 00;32
+
+# Documents
+.pdf 00;33
+.doc 00;33
+.docx 00;33
+.odt 00;33
+.txt 00;33
+.md 00;33

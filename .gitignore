@@ -1,2 +1,5 @@
 # Ignore machine-specific configurations
 local.sh
+
+# Kanban board files
+.kanban/
