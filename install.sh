@@ -23,5 +23,9 @@ if [ ! -f "${DOTFILES_DIR}/bashrc/local.sh" ]; then
     cp "${DOTFILES_DIR}/bashrc/local.sh.example" "${DOTFILES_DIR}/bashrc/local.sh"
 fi
 
+# Install cron jobs
+echo "Installing cron jobs..."
+"${DOTFILES_DIR}/scripts/cron/install_crons.sh" install
+
 echo "Installation complete! Please source your new .bashrc:"
 echo "source ~/.bashrc" 

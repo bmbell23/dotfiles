@@ -41,3 +41,29 @@ _pkg_complete() {
     esac
 }
 complete -F _pkg_complete pkg
+
+# Cron management functions
+cron() {
+    local dotfiles_dir="${HOME}/projects/dotfiles"
+    local cron_script="${dotfiles_dir}/scripts/cron/install_crons.sh"
+    
+    case "$1" in
+        "check")
+            $cron_script check
+            ;;
+        "install")
+            $cron_script install
+            ;;
+        *)
+            echo "Usage: cron {check|install}"
+            return 1
+            ;;
+    esac
+}
+
+# Cron management completion
+_cron_complete() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    COMPREPLY=($(compgen -W "check install" -- "$cur"))
+}
+complete -F _cron_complete cron

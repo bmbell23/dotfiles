@@ -1,0 +1,9 @@
+# Format: <schedule> <command> # <description>
+# Example: 0 9 * * * /path/to/script.sh # Daily morning backup
+
+# Reading Tracker Daily Report
+0 9 * * * /home/brandon/projects/reading_tracker/scripts/email/run_daily_report.sh # Daily reading progress report
+
+# System Maintenance
+0 3 * * 0 /home/brandon/projects/dotfiles/scripts/maintenance/weekly_cleanup.sh # Weekly system cleanup
+0 4 * * * /home/brandon/projects/dotfiles/scripts/maintenance/daily_backup.sh # Daily backup

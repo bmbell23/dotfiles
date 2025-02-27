@@ -52,6 +52,27 @@ This will:
   mkcd new-directory
   ```
 
+## Cron Management System
+The `cron` command provides a unified interface for managing cron jobs:
+
+```bash
+# Check for missing cron jobs
+cron check
+
+# Install all missing cron jobs
+cron install
+```
+
+Cron jobs are defined in `cron/crontab.txt` using the format:
+```bash
+<schedule> <command> # <description>
+```
+
+Example:
+```bash
+0 9 * * * /path/to/script.sh # Daily morning backup
+```
+
 ## Quick Start
 
 1. Clone the repository:
