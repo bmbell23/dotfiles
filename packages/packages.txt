@@ -1,0 +1,19 @@
+# Development tools
+git
+vim
+tmux
+curl
+wget
+build-essential
+
+# System utilities
+htop
+tree
+ncdu
+net-tools
+nmap
+
+# Shell utilities
+jq
+ripgrep
+fzf
