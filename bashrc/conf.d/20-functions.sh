@@ -5,6 +5,17 @@ mkcd() {
     mkdir -p "$1" && cd "$1"
 }
 
+# Timestamp logging function
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+# Function to redirect all output through timestamp logger
+enable_timestamps() {
+    exec 1> >(while read -r line; do log "$line"; done)
+    exec 2> >(while read -r line; do log "[ERROR] $line" >&2; done)
+}
+
 # Git version management and commit function
 gvc() {
     if [ $# -ne 2 ]; then
@@ -77,6 +88,13 @@ sp() {
 
     echo -e "${YELLOW}You're in ${WORKSPACE} right now.${RESET}"
     cd "$WORKSPACE"
+    
+    # Try to activate virtual environment if it exists
+    if [ -f "venv/bin/activate" ]; then
+        echo -e "${CYAN}Activating Python virtual environment...${RESET}"
+        source venv/bin/activate
+    fi
+
     echo -e "${YELLOW}Here's the status of your project:${RESET}"
     git status
 
@@ -102,6 +120,56 @@ _sp_complete() {
     local projects_dir="$HOME/projects"
     
     # Get all directories up to 2 levels deep, excluding hidden ones
-    COMPREPLY=($(compgen -W "$(find "$projects_dir" -mindepth 1 -maxdepth 2 -type d -not -path '*/\.*' | sed "s|$projects_dir/||")" -- "$cur"))
+    # Add trailing slash to make directory navigation more convenient
+    COMPREPLY=($(compgen -W "$(find "$projects_dir" -mindepth 1 -maxdepth 2 -type d -not -path '*/\.*' | sed "s|$projects_dir/||" | sed 's|$|/|')" -- "$cur"))
 }
 complete -F _sp_complete sp
+
+# Version management functions
+version() {
+    case "$1" in
+        "check")
+            python3 -m scripts.updates.update_version --check
+            ;;
+        "update")
+            if [ -z "$2" ]; then
+                echo "Usage: version update <version>"
+                return 1
+            fi
+            python3 -m scripts.updates.update_version --update "$2"
+            ;;
+        *)
+            echo "Usage: version {check|update <version>}"
+            return 1
+            ;;
+    esac
+}
+
+# Version management completion
+_version_complete() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    
+    case "$prev" in
+        "version")
+            COMPREPLY=($(compgen -W "check update" -- "$cur"))
+            ;;
+        *)
+            COMPREPLY=()
+            ;;
+    esac
+}
+complete -F _version_complete version
+
+# General directory completion with proper trailing slashes
+_dir_complete() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local IFS=$'\n'
+    
+    # Complete directories and ensure trailing slashes
+    COMPREPLY=($(compgen -d -- "$cur" | sed 's|$|/|'))
+}
+
+# Apply to relevant commands
+complete -o nospace -F _dir_complete cd
+

@@ -16,3 +16,14 @@ alias gd='git diff'
 alias gco='git checkout'
 alias gcb='git checkout -b'
 alias gb='git branch'
+
+# Python aliases
+alias py='python3'
+alias pip='pip3'
+
+# Python virtual environment aliases
+alias venv='source venv/bin/activate'
+alias deact='deactivate'
+
+# Project-specific aliases
+alias reading-env='cd ~/projects/reading_tracker && source venv/bin/activate'
