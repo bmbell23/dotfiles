@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Aliases for common commands
-alias src='source ~/.bashrc'
-
 # Navigation
 alias ll='ls -alhF'
 alias la='ls -A'
@@ -27,3 +24,11 @@ alias deact='deactivate'
 
 # Project-specific aliases
 alias reading-env='cd ~/projects/reading_tracker && source venv/bin/activate'
+
+# Version control
+alias vc='version_commit.sh'  # Short version
+alias version-commit='version_commit.sh'  # Explicit version
+
+# Soource bashrc
+alias src='source ~/.bashrc'
+

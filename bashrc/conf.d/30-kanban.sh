@@ -2,7 +2,7 @@
 
 # Kanban board functions
 
-# Define color codes (removing PS1-specific formatting)
+# Define color codes (for general text output)
 GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 BLUE="\033[0;34m"
@@ -13,30 +13,33 @@ RESET="\033[0m"
 backlog() {
     local item="$*"
     local backlog_file="$WORKSPACE/.kanban/backlog.txt"
-    
+
     mkdir -p "$WORKSPACE/.kanban"
     echo "$(date '+%Y-%m-%d'): $item" >> "$backlog_file"
-    printf "${GREEN}Added to backlog:${RESET} %s\n" "$item"
+    echo -e "${GREEN}Added to backlog:${RESET} $item"
+    show_kanban
 }
 
 # Move item to WIP or add new WIP item
 wip() {
     local item="$*"
     local wip_file="$WORKSPACE/.kanban/wip.txt"
-    
+
     mkdir -p "$WORKSPACE/.kanban"
     echo "$(date '+%Y-%m-%d'): $item" >> "$wip_file"
     printf "${YELLOW}Added to WIP:${RESET} %s\n" "$item"
+    show_kanban
 }
 
 # Move item to Done
 finish() {
     local item="$*"
     local done_file="$WORKSPACE/.kanban/done.txt"
-    
+
     mkdir -p "$WORKSPACE/.kanban"
     echo "$(date '+%Y-%m-%d'): $item" >> "$done_file"
     printf "${CYAN}Added to Done:${RESET} %s\n" "$item"
+    show_kanban
 }
 
 # Show kanban board
@@ -73,7 +76,7 @@ show_kanban() {
 move_to_wip() {
     local backlog_file="$WORKSPACE/.kanban/backlog.txt"
     local wip_file="$WORKSPACE/.kanban/wip.txt"
-    
+
     if [[ ! -f "$backlog_file" ]]; then
         printf "No items in backlog\n"
         return
@@ -94,7 +97,7 @@ move_to_wip() {
 move_to_done() {
     local wip_file="$WORKSPACE/.kanban/wip.txt"
     local done_file="$WORKSPACE/.kanban/done.txt"
-    
+
     if [[ ! -f "$wip_file" ]]; then
         printf "No items in WIP\n"
         return

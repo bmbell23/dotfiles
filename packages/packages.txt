@@ -1,19 +1,28 @@
-# Development tools
-git
-vim
-tmux
-curl
-wget
-build-essential
 
-# System utilities
+build-essential
+certbot
+curl
+# Development tools
+fzfcertbox python3-certbot-nginx
+git
+git gui
+git-gui
 htop
-tree
+jq
 ncdu
 net-tools
 nmap
-
-# Shell utilities
-jq
+python3-certbot-nginx
+python3-full
+python3-venv
 ripgrep
-fzf
+samba
+# Shell utilities
+# System utilities
+tmux
+tree
+ufw
+uupdate
+vim
+vimdiff
+wget

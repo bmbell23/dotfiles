@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.0] - YYYY-MM-DD
+## [1.0.1] - YYYY-MM-DD
 ### Added
 - Package management system
   - `pkg` command for installing and managing packages

@@ -18,15 +18,52 @@ enable_timestamps() {
 
 # Git version management and commit function
 gvc() {
-    if [ $# -ne 2 ]; then
-        echo "Error: Missing required arguments"
-        echo "Usage: gvc <version> <commit_message>"
-        echo "Example: gvc \"1.1.0\" \"Added package management system\""
+    local current_version
+    local version
+    local message
+
+    # Check if we have 1 or 2 arguments
+    if [ $# -eq 1 ]; then
+        # Only message provided, need to auto-increment version
+        message="$1"
+        
+        # Check which project we're in and use appropriate method
+        if [ -f "CHANGELOG.md" ]; then
+            # For dotfiles project, get version from CHANGELOG.md
+            current_version=$(grep -m 1 "## \[.*\]" CHANGELOG.md | grep -oP "\[\K[^\]]+")
+        elif [ -f "scripts/updates/update_version.py" ]; then
+            current_version=$(python3 -m scripts.updates.update_version --check | grep -oP '\d+\.\d+\.\d+' | head -n1 || true)
+        elif [ -f "pyproject.toml" ]; then
+            current_version=$(grep -m 1 "version\s*=\s*\".*\"" pyproject.toml | cut -d'"' -f2)
+        fi
+
+        if [ -z "$current_version" ]; then
+            echo "Error: Could not determine current version"
+            return 1
+        fi
+
+        echo "Current version: $current_version"
+
+        # Split version into major.minor.patch
+        IFS='.' read -r major minor patch <<< "$current_version"
+        
+        # Increment patch version
+        patch=$((patch + 1))
+        
+        # Construct new version
+        version="${major}.${minor}.${patch}"
+        
+        echo "New version will be: $version"
+        
+    elif [ $# -eq 2 ]; then
+        # Both version and message provided
+        version="$1"
+        message="$2"
+    else
+        echo "Usage: gvc <message>           # Auto-increments point release"
+        echo "       gvc <version> <message> # Uses specified version"
         return 1
     fi
-
-    local version=$1
-    local message=$2
 
     # Validate version format (X.Y.Z)
     if ! [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -34,24 +71,21 @@ gvc() {
         return 1
     fi
 
-    # Show what's being changed
-    git status
+    # Update version in appropriate files based on project type
+    if [ -f "CHANGELOG.md" ]; then
+        # For dotfiles project
+        sed -i "s/## \[.*\]/## [$version]/" CHANGELOG.md
+    elif [ -f "scripts/updates/update_version.py" ]; then
+        python3 -m scripts.updates.update_version --update "$version"
+    elif [ -f "pyproject.toml" ]; then
+        sed -i "s/version = \".*\"/version = \"$version\"/" pyproject.toml
+    fi
 
-    # Add all changes
+    # Commit changes
     git add .
-
-    # Commit with version in message
-    git commit -m "v${version}: ${message}"
-
-    # Create version tag
-    git tag -a "v${version}" -m "Version ${version}"
-
-    # Push changes and tags
+    git commit -m "v$version: $message"
+    git tag -a "v$version" -m "Version $version"
     git push && git push --tags
-
-    # Show final status
-    echo -e "\nPush complete! Version v${version} has been committed and tagged"
-    git status
 }
 
 # Set project root
@@ -98,20 +132,29 @@ sp() {
     echo -e "${YELLOW}Here's the status of your project:${RESET}"
     git status
 
-    # Show WIP items
-    echo -e "\n${YELLOW}You're currently working on:${RESET}"
-    if [[ -f "$WORKSPACE/.kanban/wip.txt" ]]; then
-        cat "$WORKSPACE/.kanban/wip.txt"
-    else
-        echo -e "${CYAN}Nothing! You have a clean slate to start something new!${RESET}"
+    # Source all shell configuration files if they exist
+    if [ -d "config/shell" ]; then
+        echo -e "${CYAN}Sourcing shell configuration files...${RESET}"
+        # Source files in a specific order
+        local shell_files=(".bash_variables" ".bash_functions" ".bash_aliases")
+        for file in "${shell_files[@]}"; do
+            if [ -f "config/shell/$file" ]; then
+                echo -e "${CYAN}Loading $file...${RESET}"
+                source "config/shell/$file"
+            fi
+        done
+        # Source any additional .bash_* files
+        for file in config/shell/.bash_*; do
+            if [ -f "$file" ] && [[ ! " ${shell_files[@]} " =~ " $(basename $file) " ]]; then
+                echo -e "${CYAN}Loading $(basename $file)...${RESET}"
+                source "$file"
+            fi
+        done
     fi
 
     # Prompt to show full kanban board
-    echo -e "\n${YELLOW}Would you like to see the full kanban board? ${BLUE}(y/n)${RESET}"
-    read -r show_kanban
-    if [[ "$show_kanban" =~ ^[Yy]$ ]]; then
-        show_kanban
-    fi
+    echo -e "\n${YELLOW}Here's your kanban board for this project:${RESET}"
+    show_kanban
 }
 
 # Project switching completion with subdirectory support
@@ -172,4 +215,3 @@ _dir_complete() {
 
 # Apply to relevant commands
 complete -o nospace -F _dir_complete cd
-
