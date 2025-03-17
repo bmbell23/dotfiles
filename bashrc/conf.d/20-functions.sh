@@ -26,7 +26,7 @@ gvc() {
     if [ $# -eq 1 ]; then
         # Only message provided, need to auto-increment version
         message="$1"
-        
+
         # Check which project we're in and use appropriate method
         if [ -f "CHANGELOG.md" ]; then
             # For dotfiles project, get version from CHANGELOG.md
@@ -46,15 +46,15 @@ gvc() {
 
         # Split version into major.minor.patch
         IFS='.' read -r major minor patch <<< "$current_version"
-        
+
         # Increment patch version
         patch=$((patch + 1))
-        
+
         # Construct new version
         version="${major}.${minor}.${patch}"
-        
+
         echo "New version will be: $version"
-        
+
     elif [ $# -eq 2 ]; then
         # Both version and message provided
         version="$1"
@@ -90,7 +90,7 @@ gvc() {
 
 # Set project root
 sp() {
-    WORKSPACE="/home/brandon/projects/$1"
+    WORKSPACE="/home/$USER/projects/$1"
 
     local hour=$(date +%H)
     local name=${1:-$(whoami)}  # Use provided name or username if not provided
@@ -115,14 +115,14 @@ sp() {
 
     # Get current time in 12-hour format
     local time=$(date +"%I:%M %p")
-    
+
     clear
     echo -e "${GREEN}${greeting}, $USER! ${comment}${RESET}"
     echo -e "${CYAN}It's currently ${time}.${RESET}"
 
     echo -e "${YELLOW}You're in ${WORKSPACE} right now.${RESET}"
     cd "$WORKSPACE"
-    
+
     # Try to activate virtual environment if it exists
     if [ -f "venv/bin/activate" ]; then
         echo -e "${CYAN}Activating Python virtual environment...${RESET}"
@@ -161,7 +161,7 @@ sp() {
 _sp_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local projects_dir="$HOME/projects"
-    
+
     # Get all directories up to 2 levels deep, excluding hidden ones
     # Add trailing slash to make directory navigation more convenient
     COMPREPLY=($(compgen -W "$(find "$projects_dir" -mindepth 1 -maxdepth 2 -type d -not -path '*/\.*' | sed "s|$projects_dir/||" | sed 's|$|/|')" -- "$cur"))
@@ -192,7 +192,7 @@ version() {
 _version_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
-    
+
     case "$prev" in
         "version")
             COMPREPLY=($(compgen -W "check update" -- "$cur"))
@@ -208,7 +208,7 @@ complete -F _version_complete version
 _dir_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local IFS=$'\n'
-    
+
     # Complete directories and ensure trailing slashes
     COMPREPLY=($(compgen -d -- "$cur" | sed 's|$|/|'))
 }
