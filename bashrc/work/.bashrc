@@ -7,3 +7,8 @@ fi
 if [ -f /etc/bashrc ]; then
     source /etc/bashrc
 fi
+
+# Only do this stuff if we're in an interactive shell
+if [[ "$-" =~ 'i' ]]; then
+    umask 022
+fi

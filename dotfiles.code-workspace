@@ -5,7 +5,7 @@
         }
     ],
     "settings": {
-        "workbench.colorTheme": "Pink Cat Boo",  // or any other theme name
+        "workbench.colorTheme": "Default Dark+",  // or any other theme name
         "workbench.iconTheme": "material-icon-theme",  // optional: for file icons
         "search.exclude": {
             "**/node_modules": true,
