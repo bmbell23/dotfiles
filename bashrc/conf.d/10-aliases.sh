@@ -34,3 +34,4 @@ alias version-commit='version_commit.sh'  # Explicit version
 # Soource bashrc
 alias src='source ~/.bashrc'
 
+alias p='cd ~/projects && clear'
