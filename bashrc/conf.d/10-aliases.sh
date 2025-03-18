@@ -13,6 +13,8 @@ alias gd='git diff'
 alias gco='git checkout'
 alias gcb='git checkout -b'
 alias gb='git branch'
+alias gac='git add . && git commit'
+alias gp='git pull'
 
 # Python aliases
 alias py='python3'

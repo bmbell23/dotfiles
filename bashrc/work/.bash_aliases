@@ -30,25 +30,25 @@ alias cjv="cat /ddn/janus_version.txt"
 
 alias nodes="ssh -vvv bbell@co-ci.colorado.datadirectnet.com \"python work/projects/auto/tools/jenkins/jenkins_node_deb_ver.py >> /home/bbell/sandbox/co-ci_nodes/nodes_'$(date '+%Y-%m-%d').csv'\""
 
- Return the mac address for eth0
+# Return the mac address for eth0
 alias mac="ip address | grep -C 2 eth0 | grep link/ether | cut -d' ' -f6"
 
- Git restore and rebase
+# Git restore and rebase
 alias gitrr='git restore --staged *;git restore *;git rebase --continue'
 
- change dir to pem kits
+# change dir to pem kits
 alias cdpk='cd ~/sandbox/kits/pem_kits/'
 
- Set time
+# Set time
 alias stime='ctime;sudo timedatectl set-timezone UTC;sudo su -c "echo UTC > /etc/timezone";cat /etc/timezone;ls -alh /etc/localtime'
 
- Check time
+# Check time
 alias ctime="cat /etc/timezone;ls -alh /etc/localtime"
 
 
 alias lv="perl ~/work/general/tools/scripts/lv.pl"
 
- Create a PEM Kit
+# Create a PEM Kit
 alias cpk="sudo platform/make_flash -D -K PEM local . debug"
 
 
@@ -81,10 +81,10 @@ alias src='source ~/.bashrc'
 
 alias db00='ssh root@10.36.16.25;TEST'
 
- Clear and then Long List
+# Clear and then Long List
 alias cl='clear;ll'
 
- Go to projects and Long List
+# Go to projects and Long List
 alias cdp='cd ~/work/projects;ll'
 
 

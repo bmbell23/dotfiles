@@ -10,12 +10,11 @@ if [ -f "${HOME}/projects/dotfiles/bashrc/local.sh" ]; then
     source "${HOME}/projects/dotfiles/bashrc/local.sh"
 fi
 
-# Source all work-specific bash files
-for config in "${HOME}/projects/dotfiles/bashrc/work/.bash*"; do
-    if [ -f "$config" ]; then
-        source "$config"
-    fi
-done
+# Source work-specific bash files explicitly
+source "${HOME}/projects/dotfiles/bashrc/work/.bashrc"
+source "${HOME}/projects/dotfiles/bashrc/work/.bash_functions"
+source "${HOME}/projects/dotfiles/bashrc/work/.bash_aliases"
+source "${HOME}/projects/dotfiles/bashrc/work/.bash_variables"
 
 # Source project specific bashrc if it exists
 if [ -f "${WORKSPACE}/.bashrc" ]; then
