@@ -226,3 +226,36 @@ _dir_complete() {
 
 # Apply to relevant commands
 complete -o nospace -F _dir_complete cd
+
+# Interactive project selector
+function pp() {
+    # Store projects in an array, stripping the path prefix
+    local projects=($(ls -d ~/projects/* | sed 's|/home/'$USER'/projects/||'))
+    local i=1
+
+    # Display numbered list of projects
+    echo "Available projects:"
+    echo "-----------------"
+    for project in "${projects[@]}"; do
+        printf "%2d) %s\n" $i "$project"
+        ((i++))
+    done
+
+    # Prompt for selection
+    echo
+    read -p "Select project number (1-${#projects[@]}): " selection
+
+    # Validate input
+    if ! [[ "$selection" =~ ^[0-9]+$ ]] || \
+       [ "$selection" -lt 1 ] || \
+       [ "$selection" -gt "${#projects[@]}" ]; then
+        echo "Invalid selection"
+        return 1
+    fi
+
+    # Convert selection to array index (0-based)
+    local index=$((selection - 1))
+
+    # Call sp with selected project
+    sp "${projects[$index]}"
+}
