@@ -21,6 +21,14 @@ gvc() {
     local current_version
     local version
     local message
+    local git_root
+
+    # Get the git root directory
+    git_root=$(git rev-parse --show-toplevel)
+    if [ $? -ne 0 ]; then
+        echo "Error: Not in a git repository"
+        return 1
+    fi
 
     # Check if we have 1 or 2 arguments
     if [ $# -eq 1 ]; then
@@ -28,13 +36,15 @@ gvc() {
         message="$1"
 
         # Check which project we're in and use appropriate method
-        if [ -f "CHANGELOG.md" ]; then
-            # For dotfiles project, get version from CHANGELOG.md
-            current_version=$(grep -m 1 "## \[.*\]" CHANGELOG.md | grep -oP "\[\K[^\]]+")
-        elif [ -f "scripts/updates/update_version.py" ]; then
+        if [ -f "${git_root}/version.txt" ]; then
+            # For dotfiles project, get version from version.txt
+            current_version=$(cat "${git_root}/version.txt")
+        elif [ -f "${git_root}/CHANGELOG.md" ]; then
+            current_version=$(grep -m 1 "## \[.*\]" "${git_root}/CHANGELOG.md" | grep -oP "\[\K[^\]]+")
+        elif [ -f "${git_root}/scripts/updates/update_version.py" ]; then
             current_version=$(python3 -m scripts.updates.update_version --check | grep -oP '\d+\.\d+\.\d+' | head -n1 || true)
-        elif [ -f "pyproject.toml" ]; then
-            current_version=$(grep -m 1 "version\s*=\s*\".*\"" pyproject.toml | cut -d'"' -f2)
+        elif [ -f "${git_root}/pyproject.toml" ]; then
+            current_version=$(grep -m 1 "version\s*=\s*\".*\"" "${git_root}/pyproject.toml" | cut -d'"' -f2)
         fi
 
         if [ -z "$current_version" ]; then
@@ -72,13 +82,14 @@ gvc() {
     fi
 
     # Update version in appropriate files based on project type
-    if [ -f "CHANGELOG.md" ]; then
-        # For dotfiles project
-        sed -i "s/## \[.*\]/## [$version]/" CHANGELOG.md
-    elif [ -f "scripts/updates/update_version.py" ]; then
+    if [ -f "${git_root}/version.txt" ]; then
+        echo "$version" > "${git_root}/version.txt"
+    elif [ -f "${git_root}/CHANGELOG.md" ]; then
+        sed -i "s/## \[.*\]/## [$version]/" "${git_root}/CHANGELOG.md"
+    elif [ -f "${git_root}/scripts/updates/update_version.py" ]; then
         python3 -m scripts.updates.update_version --update "$version"
-    elif [ -f "pyproject.toml" ]; then
-        sed -i "s/version = \".*\"/version = \"$version\"/" pyproject.toml
+    elif [ -f "${git_root}/pyproject.toml" ]; then
+        sed -i "s/version = \".*\"/version = \"$version\"/" "${git_root}/pyproject.toml"
     fi
 
     # Commit changes
