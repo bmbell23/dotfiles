@@ -112,7 +112,9 @@ sp() {
     local YELLOW="\033[0;33m"
     local BLUE="\033[0;34m"
     local CYAN="\033[0;36m"
+    local WHITE="\033[1;37m"
     local RESET="\033[0m"
+    local BOLD="\033[1m"
 
     # Determine greeting and comment based on time of day
     if (( hour >= 0 && hour < 12 )); then
@@ -124,48 +126,74 @@ sp() {
         greeting="Good evening"
     fi
 
-    # Get current time in 12-hour format
-    local time=$(date +"%I:%M %p")
-
-    clear
-    echo -e "${GREEN}${greeting}, $USER! ${comment}${RESET}"
-    echo -e "${CYAN}It's currently ${time}.${RESET}"
-
-    echo -e "${GREEN}You're in:\n${WORKSPACE}${RESET}"
     cd "$WORKSPACE"
 
-    # Try to activate virtual environment if it exists
-    if [ -f "venv/bin/activate" ]; then
-        echo -e "${CYAN}Activating Python virtual environment...${RESET}"
-        source venv/bin/activate
+    # Only show kanban board for specific projects
+    if [[ "$1" == "reading_tracker" || "$1" == "dotfiles" ]]; then
+        echo -e "\n${YELLOW}Here's your kanban board for this project:${RESET}"
+        show_kanban
     fi
 
-    echo -e "${YELLOW}Here's the status of your project:${RESET}"
-    git status
-
-    # Source all shell configuration files if they exist
-    if [ -d "config/shell" ]; then
-        echo -e "${CYAN}Sourcing shell configuration files...${RESET}"
-        # Source files in a specific order
-        local shell_files=(".bash_variables" ".bash_functions" ".bash_aliases")
-        for file in "${shell_files[@]}"; do
-            if [ -f "config/shell/$file" ]; then
-                echo -e "${CYAN}Loading $file...${RESET}"
-                source "config/shell/$file"
-            fi
-        done
-        # Source any additional .bash_* files
-        for file in config/shell/.bash_*; do
-            if [ -f "$file" ] && [[ ! " ${shell_files[@]} " =~ " $(basename $file) " ]]; then
-                echo -e "${CYAN}Loading $(basename $file)...${RESET}"
-                source "$file"
-            fi
-        done
+    # Determine theme based on project type
+    local theme_name
+    if [[ "$1" == *"auto"* ]]; then
+        theme_name="mikasa rainbow"
+    elif [[ "$1" == *"sfaos"* ]]; then
+        theme_name="Monokai"
+    else
+        theme_name="Default Dark+"  # fallback theme
     fi
 
-    # Prompt to show full kanban board
-    echo -e "\n${YELLOW}Here's your kanban board for this project:${RESET}"
-    show_kanban
+    # Look for and launch workspace file, create if missing
+    local workspace_file="${1}.code-workspace"
+    if [ ! -f "$workspace_file" ]; then
+        cat > "${workspace_file}" << EOF
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "name": "${1}",
+    "settings": {
+        "workbench.colorTheme": "${theme_name}",
+        "search.exclude": {
+            "**/node_modules": true,
+            "**/bower_components": true,
+            "**/*.code-search": true,
+            "**/build/**": true,
+            "**/dist/**": true
+        },
+        "files.exclude": {
+            "**/.git": true,
+            "**/.svn": true,
+            "**/.hg": true,
+            "**/CVS": true,
+            "**/.DS_Store": true,
+            "**/Thumbs.db": true
+        },
+        "files.watcherExclude": {
+            "**/.git/objects/**": true,
+            "**/.git/subtree-cache/**": true,
+            "**/node_modules/**": true,
+            "**/build/**": true,
+            "**/dist/**": true
+        }
+    }
+}
+EOF
+        echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
+    else
+        # Update existing workspace file's theme
+        sed -i "s/\"workbench.colorTheme\": \".*\"/\"workbench.colorTheme\": \"${theme_name}\"/" "$workspace_file"
+        if ! grep -q "workbench.colorTheme" "$workspace_file"; then
+            # If theme setting doesn't exist, add it to settings object
+            sed -i "/\"settings\": {/a \        \"workbench.colorTheme\": \"${theme_name}\"," "$workspace_file"
+        fi
+    fi
+
+    # Launch workspace in VS Code
+    code -n "$workspace_file"
 }
 
 # Project switching completion without subdirectory support
@@ -319,6 +347,16 @@ function pp() {
     echo -e "\n${GREEN}Switching to project: ${WHITE}${BOLD}${project_name}${RESET}"
     sp "${project_name}"
 
+    # Determine theme based on project type
+    local theme_name
+    if [[ "${project_name}" == *"auto"* ]]; then
+        theme_name="mikasa rainbow"
+    elif [[ "${project_name}" == *"sfaos"* ]]; then
+        theme_name="Monokai"
+    else
+        theme_name="Default Dark+"  # fallback theme
+    fi
+
     # Look for and launch workspace file, create if missing
     local workspace_file="${project_name}.code-workspace"
     if [ ! -f "$workspace_file" ]; then
@@ -331,6 +369,7 @@ function pp() {
     ],
     "name": "${project_name}",
     "settings": {
+        "workbench.colorTheme": "${theme_name}",
         "search.exclude": {
             "**/node_modules": true,
             "**/bower_components": true,
@@ -357,6 +396,13 @@ function pp() {
 }
 EOF
         echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
+    else
+        # Update existing workspace file's theme
+        sed -i "s/\"workbench.colorTheme\": \".*\"/\"workbench.colorTheme\": \"${theme_name}\"/" "$workspace_file"
+        if ! grep -q "workbench.colorTheme" "$workspace_file"; then
+            # If theme setting doesn't exist, add it to settings object
+            sed -i "/\"settings\": {/a \        \"workbench.colorTheme\": \"${theme_name}\"," "$workspace_file"
+        fi
     fi
 
     # Launch workspace in VS Code

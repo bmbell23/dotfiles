@@ -556,7 +556,15 @@ function tree() {
                 git -C "/home/$USER/projects/${worktree_name}" status --porcelain >/dev/null 2>&1
             fi
 
-            # Create VS Code workspace file with simplified name but descriptive display name
+            # Set theme based on repo type
+            local theme_name
+            if [[ "$repo" == "a" ]]; then
+                theme_name="mikasa rainbow"
+            else
+                theme_name="Monokai"
+            fi
+
+            # Create VS Code workspace file with repository-specific theme
             local workspace_file="/home/$USER/projects/${worktree_name}/${worktree_name}.code-workspace"
             cat > "${workspace_file}" << EOF
 {
@@ -567,6 +575,7 @@ function tree() {
     ],
     "name": "${worktree_name}",
     "settings": {
+        "workbench.colorTheme": "${theme_name}",
         "search.exclude": {
             "**/node_modules": true,
             "**/bower_components": true,
@@ -597,6 +606,24 @@ EOF
 
             # Open VS Code with the workspace
             code -n "${worktree_name}.code-workspace"
+
+            # If this is an SFAOS tree, setup lib symlink and virtual environment
+            if [[ "$repo" == "s" ]]; then
+                local scripts_dir="/home/$USER/projects/${worktree_name}/janus/test/scripts"
+                local monty_dir="/home/$USER/projects/${worktree_name}/janus/test/monty"
+
+                if [[ -d "$scripts_dir" ]]; then
+                    echo -e "\nCreating lib symlink for SFAOS..."
+                    cd "$scripts_dir"
+                    ln -s /home/$USER/projects/auto/lib
+                fi
+
+                if [[ -d "$monty_dir" ]]; then
+                    echo -e "\nSetting up Python virtual environment..."
+                    cd "$monty_dir"
+                    env/venv.sh
+                fi
+            fi
 
             # Return to projects directory
             cd ~/projects

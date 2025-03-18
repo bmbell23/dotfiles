@@ -44,11 +44,18 @@ finish() {
 
 # Show kanban board
 show_kanban() {
+    local project_name=$(basename "$WORKSPACE")
+
+    # Only proceed for specific projects
+    if [[ "$project_name" != "reading_tracker" && "$project_name" != "dotfiles" ]]; then
+        return 0
+    fi
+
     local backlog_file="$WORKSPACE/.kanban/backlog.txt"
     local wip_file="$WORKSPACE/.kanban/wip.txt"
     local done_file="$WORKSPACE/.kanban/done.txt"
 
-    printf "\n${YELLOW}📋 Kanban Board for ${CYAN}%s${RESET}\n\n" "$(basename "$WORKSPACE")"
+    printf "\n${YELLOW}📋 Kanban Board for ${CYAN}%s${RESET}\n\n" "$project_name"
 
     printf "${YELLOW}🚀 IN PROGRESS:${RESET}\n"
     if [[ -f "$wip_file" ]]; then
