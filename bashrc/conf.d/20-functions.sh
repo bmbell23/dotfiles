@@ -131,7 +131,7 @@ sp() {
     echo -e "${GREEN}${greeting}, $USER! ${comment}${RESET}"
     echo -e "${CYAN}It's currently ${time}.${RESET}"
 
-    echo -e "${YELLOW}You're in ${WORKSPACE} right now.${RESET}"
+    echo -e "${GREEN}You're in:\n${WORKSPACE}${RESET}"
     cd "$WORKSPACE"
 
     # Try to activate virtual environment if it exists
@@ -172,7 +172,7 @@ sp() {
 _sp_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local projects_dir="$HOME/projects"
-    
+
     # Get only top-level directories, excluding hidden ones
     COMPREPLY=($(compgen -W "$(find "$projects_dir" -mindepth 1 -maxdepth 1 -type d -not -path '*/\.*' | sed "s|$projects_dir/||")" -- "$cur"))
 }
@@ -226,35 +226,139 @@ _dir_complete() {
 # Apply to relevant commands
 complete -o nospace -F _dir_complete cd
 
-# Interactive project selector
+# Interactive project selector with fancy formatting
 function pp() {
-    # Store projects in an array, stripping the path prefix
-    local projects=($(ls -d ~/projects/* | sed 's|/home/'$USER'/projects/||'))
-    local i=1
+    # Colors and formatting
+    local RED="\033[0;31m"
+    local GREEN="\033[0;32m"
+    local YELLOW="\033[0;33m"
+    local BLUE="\033[0;34m"
+    local PURPLE="\033[0;35m"
+    local CYAN="\033[0;36m"
+    local WHITE="\033[1;37m"
+    local RESET="\033[0m"
+    local BOLD="\033[1m"
 
-    # Display numbered list of projects
-    echo "Available projects:"
-    echo "-----------------"
+    # Box drawing characters
+    local TOP_LEFT="╭"
+    local TOP_RIGHT="╮"
+    local BOTTOM_LEFT="╰"
+    local BOTTOM_RIGHT="╯"
+    local HORIZONTAL="─"
+    local VERTICAL="│"
+    local BULLET="•"
+
+    # Store projects in an array
+    local projects=($(ls -d ~/projects/* | sed 's|/home/'$USER'/projects/||' | sort))
+    local project_count=${#projects[@]}
+
+    # Calculate max project name length
+    local max_length=0
     for project in "${projects[@]}"; do
-        printf "%2d) %s\n" $i "$project"
-        ((i++))
+        if [ ${#project} -gt $max_length ]; then
+            max_length=${#project}
+        fi
     done
 
+    # Box dimensions
+    local SIDE_PADDING=2
+    local NUMBER_WIDTH=4  # "XX) "
+    local INNER_WIDTH=$((max_length + NUMBER_WIDTH + (2 * SIDE_PADDING)))
+    local TITLE="[ Project Selector ]"
+    local TITLE_LENGTH=${#TITLE}
+    local LEFT_PADDING=$(( (INNER_WIDTH - TITLE_LENGTH - 1) / 2 ))
+    local RIGHT_PADDING=$((INNER_WIDTH - TITLE_LENGTH - LEFT_PADDING - 1))
+
+    # Clear screen
+    clear
+
+    # Print top border with centered title
+    echo -en "${CYAN}${TOP_LEFT}"
+    printf "%${LEFT_PADDING}s" | tr " " "${HORIZONTAL}"
+    echo -en "${WHITE}${BOLD}${TITLE}${CYAN}"
+    printf "%${RIGHT_PADDING}s" | tr " " "${HORIZONTAL}"
+    echo -e "${TOP_RIGHT}${RESET}"
+
+    # Print project count
+    echo -en "${CYAN}${VERTICAL}${RESET} Found ${GREEN}${BOLD}${project_count}${RESET} projects"
+    printf "%$((INNER_WIDTH - 18))s" ""
+    echo -e "${CYAN}${VERTICAL}${RESET}"
+
+    # Print separator
+    echo -en "${CYAN}${VERTICAL}"
+    printf "%$((INNER_WIDTH - 1))s" | tr " " "${HORIZONTAL}"
+    echo -e "${VERTICAL}${RESET}"
+
+    # Display projects
+    for ((i=0; i<project_count; i++)); do
+        local num=$((i + 1))
+        echo -en "${CYAN}${VERTICAL}${RESET} "
+        printf "${YELLOW}%2d${RESET}) %-${max_length}s" $num "${projects[$i]}"
+        printf "%${SIDE_PADDING}s" ""
+        echo -e "${CYAN}${VERTICAL}${RESET}"
+    done
+
+    # Print bottom border
+    echo -en "${CYAN}${BOTTOM_LEFT}"
+    printf "%$((INNER_WIDTH - 1))s" | tr " " "${HORIZONTAL}"
+    echo -e "${BOTTOM_RIGHT}${RESET}"
+
     # Prompt for selection
-    echo
-    read -p "Select project number (1-${#projects[@]}): " selection
+    echo -en "\n${CYAN}${BULLET}${RESET} Select project ${CYAN}(${WHITE}1${CYAN}-${WHITE}${project_count}${CYAN})${RESET}: "
+    read selection
 
     # Validate input
-    if ! [[ "$selection" =~ ^[0-9]+$ ]] || \
-       [ "$selection" -lt 1 ] || \
-       [ "$selection" -gt "${#projects[@]}" ]; then
-        echo "Invalid selection"
+    if ! [[ "$selection" =~ ^[0-9]+$ ]] || [ "$selection" -lt 1 ] || [ "$selection" -gt "$project_count" ]; then
+        echo -e "\n${RED}Invalid selection${RESET}"
         return 1
     fi
 
-    # Convert selection to array index (0-based)
+    # Switch to selected project
     local index=$((selection - 1))
+    local project_name="${projects[$index]}"
+    echo -e "\n${GREEN}Switching to project: ${WHITE}${BOLD}${project_name}${RESET}"
+    sp "${project_name}"
 
-    # Call sp with selected project
-    sp "${projects[$index]}"
+    # Look for and launch workspace file, create if missing
+    local workspace_file="${project_name}.code-workspace"
+    if [ ! -f "$workspace_file" ]; then
+        cat > "${workspace_file}" << EOF
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "name": "${project_name}",
+    "settings": {
+        "search.exclude": {
+            "**/node_modules": true,
+            "**/bower_components": true,
+            "**/*.code-search": true,
+            "**/build/**": true,
+            "**/dist/**": true
+        },
+        "files.exclude": {
+            "**/.git": true,
+            "**/.svn": true,
+            "**/.hg": true,
+            "**/CVS": true,
+            "**/.DS_Store": true,
+            "**/Thumbs.db": true
+        },
+        "files.watcherExclude": {
+            "**/.git/objects/**": true,
+            "**/.git/subtree-cache/**": true,
+            "**/node_modules/**": true,
+            "**/build/**": true,
+            "**/dist/**": true
+        }
+    }
+}
+EOF
+        echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
+    fi
+
+    # Launch workspace in VS Code
+    code -n "$workspace_file"
 }

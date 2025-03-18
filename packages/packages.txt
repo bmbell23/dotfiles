@@ -19,6 +19,7 @@ ripgrep
 samba
 # Shell utilities
 # System utilities
+tig
 tmux
 tree
 ufw

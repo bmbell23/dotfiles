@@ -29,150 +29,6 @@ function cdl()
     ll
 }
 
-# Function: Create a GIT worktree
-function gworktree()
-{
-    name=$1
-    if [[ -z "$name" ]]; then
-        echo "Must provide a worktree name"
-        return 1
-    fi
-
-    # CD to a known good starting point for Git
-    sp sfaos
-
-    if [ -d ../$name ]; then
-        echo "$name branch or worktree already exists."
-        return 1
-    fi
-
-    git worktree add -b $name ../$name origin/$name
-
-    sp $name
-    cd janus/test/scripts
-    ln -s /home/$USER/work/projects/auto/lib
-
-    cd ../monty
-    env/venv.sh
-    sp $name
-}
-
-# Function: Delete a GIT worktree AND Branch
-function dworktree()
-{
-    name=$1
-    if [[ -z "$name" ]]; then
-        echo "Must provide a worktree name"
-        return 1
-    fi
-    BRPTR="/home/$USER/work/projects/$name"
-    if [[ ! -d $BRPTR ]]; then
-        echo "'${BRPTR}' worktree not found."
-        return 1
-    fi
-
-    # CD to the branch and remove the lib
-    if [[ -d $BRPTR/janus/test/scripts/lib ]]; then
-        rm $BRPTR/janus/test/scripts/lib
-    fi
-
-    # CD to a known good repo
-    sp sfaos
-    rm -rf ../$name
-
-    git worktree prune
-    git branch -D $name
-}
-
-# Function: Code Load onto Controllers
-function codeload()
-{
-    gomonty;
-    py3 frontend.py --clear-test --target 10.36.31.$1 --partner 10.36.31.$2 --test Upgrade.test_previous_release --collect --kit $3 --auto_repos_rev 1 --project SFA
-}
-
-# Function: Look up the SHA or Rev for a given Rev or SHA
-function revsha()
-{
-    revision=""
-    sha=""
-    verbose=0
-    OPTIND=1
-    while getopts "h?vr:s:" OPTION
-    do
-    case $OPTION in
-        h|\?)
-        cat <<EOF
-Usage: revsha [-hvrs]
--h   : show this help
--v   : verbose output (returns complete SHA and build string)
--r   : Revision to find, returns SHA
--s   : SHA to find returns Revision (short 12-digit SHA accepted too)
-
-Examples: (Do not specify Revision and SHA together)
-GIT
-revsha -r 135934           -- returns d085b20242644ab6f8949e3cd004962fbae2ec92
-revsha -v -s d085b2024264  -- returns d085b20242644ab6f8949e3cd004962fbae2ec92 12.3.b-135934-d085b2024264
-SVN
-revsha -r 35000            -- returns 2d54900cffc96f482de934d570d21dbdf123ed4d
-revsha -v -s 2d54900cffc9  -- returns 2d54900cffc96f482de934d570d21dbdf123ed4d r35000 trunk
-EOF
-        return 0
-        ;;
-        v)  verbose=1
-            ;;
-        r)  revision=$OPTARG
-            ;;
-        s)  sha=$OPTARG
-            ;;
-    esac
-    done
-    shift $((OPTIND-1))
-
-    if [[ "${revision}" != "" && "${sha}" != "" ]]
-    then
-        echo "Revision OR SHA must be specified, but not both."
-        return 1
-    fi
-    if [[ "${revision}" == "" && "${sha}" == "" ]]
-    then
-        echo "Revision OR SHA must be specified."
-        return 1
-    fi
-}
-
-
-#############################################################################
-################################# FUNCTIONS #################################
-#############################################################################
-
-# Function: Create a PEM Kit ISO
-function cpi()
-{
-	sudo platform/make_iso_boot -D PEM ISO $1
-}
-
-# Function: Delete a branch and checkout master
-function gitdb()
-{
-	git checkout master
-	gp
-	git branch --delete $1
-}
-
-# Function: Install a PEM Kit
-function ipk()
-{
-    sudo /ddn/install/upgrade_fw.sh $1
-}
-
-# Function: Navigate to a directory and long list
-function cdl()
-{
-	cd $1
-	ll
-}
-
 # This function creates a GIT worktree
 # The name of the worktree must match a git repo branch name
 function gworktree()
@@ -596,76 +452,191 @@ function greset()
 	git pull
 }
 
-#Function: Generate an sfaos-based Git Worktree
-function gstree()
-{
-	sp sfaos
-	clear
-	echo -e "Swapping to sfaos for a safe place to work."
-	echo -e  "\nCreating worktree: sfaos-SFAP-$1"
-	git branch sfaos-SFAP-$1
-	git worktree add /home/$USER/projects/sfaos-SFAP-$1 sfaos-SFAP-$1
-	upstream_branch=${2:-master}
-	git branch --set-upstream-to=origin/$upstream_branch sfaos-SFAP-$1
-	echo -e "\nSetting your project to: SFAP-$1"
-	sp sfaos-SFAP-$1
-	echo -e "\nYour new list of worktrees:"
-	git worktree list
-}
+# Function: Manage Git Worktrees
+# Usage: tree <action> <repo> <ticket> [upstream_branch]
+# action: g (generate) or d (delete)
+# repo: a (auto) or s (sfaos)
+# ticket: SFAP ticket number
+# upstream_branch: optional, defaults to master
+function tree() {
+    # Validate arguments
+    if [[ $# -lt 3 ]]; then
+        echo "Usage: tree <action> <repo> <ticket> [upstream_branch]"
+        echo "action: g (generate) or d (delete)"
+        echo "repo: a (auto) or s (sfaos)"
+        echo "ticket: SFAP ticket number"
+        return 1
+    fi
 
-#Function: Delete an sfaos-based Git Worktree
-function dstree()
-{
-	sp sfaos
-	clear
-	echo -e "Swapping to sfaos for a safe place to work."
-	echo -e "\nYour current list of worktrees:"
-	git worktree list
-	echo -e "\nRemoving worktree: SFAP-$1"
-	rm -rf /home/$USER/projects/sfaos-SFAP-$1
-	echo -e "\nPruning your worktrees."
-	git worktree prune
-	echo -e "\nRemoving branch: SFAP-$1"
-	git branch -D sfaos-SFAP-$1
-	echo -e "\nYour new list of worktrees:"
-	git worktree list
-	cd .. && ll
-}
+    # Parse arguments
+    local action="$1"
+    local repo="$2"
+    local ticket="$3"
+    local upstream_branch="${4:-master}"
+    local base_repo
+    local worktree_name
+    local ticket_number
 
-#Function: Generate an auto-based Git Worktree
-function gatree()
-{
-        sp auto
-        clear
-        echo -e "Swapping to auto for a safe place to work."
-        echo -e  "\nCreating worktree: auto-SFAP-$1"
-        git branch auto-SFAP-$1
-        git worktree add /home/$USER/projects/auto-SFAP-$1 auto-SFAP-$1
-        upstream_branch=${2:-master}
-	git branch --set-upstream-to=origin/$upstream_branch auto-SFAP-$1
-        echo -e "\nSetting your project to: auto-SFAP-$1"
-        sp auto-SFAP-$1
-        echo -e "\nYour new list of worktrees:"
-        git worktree list
-}
+    # Extract the 5-digit ticket number
+    if [[ $ticket =~ ^([0-9]{5}) ]]; then
+        ticket_number="${BASH_REMATCH[1]}"
+    else
+        ticket_number="$ticket"
+    fi
 
-#Function: Delete an auto-based Git Worktree
-function datree()
+    # Validate action
+    case "$action" in
+        g|d) ;;
+        *) echo "Invalid action. Use 'g' for generate or 'd' for delete"; return 1 ;;
+    esac
+
+    # Set base repository
+    case "$repo" in
+        a) base_repo="auto" ;;
+        s) base_repo="sfaos" ;;
+        *) echo "Invalid repo. Use 'a' for auto or 's' for sfaos"; return 1 ;;
+    esac
+
+    # Set worktree name
+    worktree_name="${base_repo}-SFAP-${ticket}"
+
+    # Switch to base repository
+    sp "$base_repo"
+    clear
+    echo -e "Swapping to ${base_repo} for a safe place to work."
+
+    case "$action" in
+        g) # Generate worktree
+            echo -e "\nCreating worktree: ${worktree_name}"
+            git branch "${worktree_name}"
+            git worktree add "/home/$USER/projects/${worktree_name}" "${worktree_name}"
+            git branch --set-upstream-to="origin/${upstream_branch}" "${worktree_name}"
+
+            # Update .gitignore first
+            local gitignore_file="/home/$USER/projects/${worktree_name}/.gitignore"
+            local needs_workspace=true
+            local needs_kanban=true
+            local needs_dotlogs=true
+
+            if [[ -f "${gitignore_file}" ]]; then
+                grep -q "^*.code-workspace$" "${gitignore_file}" && needs_workspace=false
+                grep -q "^.kanban/$" "${gitignore_file}" && needs_kanban=false
+                grep -q "^.logs$" "${gitignore_file}" && needs_dotlogs=false
+            fi
+
+            # Only append what's missing
+            {
+                [[ "${needs_workspace}" == "true" ]] && echo "*.code-workspace"
+                [[ "${needs_kanban}" == "true" ]] && echo ".kanban/"
+                [[ "${needs_dotlogs}" == "true" ]] && echo ".logs"
+            } >> "${gitignore_file}"
+
+            # If we made changes to .gitignore, commit them
+            if git -C "/home/$USER/projects/${worktree_name}" status --porcelain | grep -q ".gitignore"; then
+                git -C "/home/$USER/projects/${worktree_name}" add .gitignore
+                git -C "/home/$USER/projects/${worktree_name}" commit -m "chore: Update .gitignore with standard exclusions"
+            fi
+
+            # Create .kanban directory and its files
+            mkdir -p "/home/$USER/projects/${worktree_name}/.kanban"
+            touch "/home/$USER/projects/${worktree_name}/.kanban/backlog.txt"
+            touch "/home/$USER/projects/${worktree_name}/.kanban/wip.txt"
+            touch "/home/$USER/projects/${worktree_name}/.kanban/done.txt"
+
+            # Symlink logs if they exist
+            local logs_source="/home/logs/SFAP-${ticket_number}"
+            if [[ -d "${logs_source}" ]]; then
+                echo -e "\nFound logs for SFAP-${ticket_number}, creating symlink..."
+                echo "Source: ${logs_source}"
+
+                # Create .logs as direct symlink to the logs source
+                ln -s "${logs_source}" "/home/$USER/projects/${worktree_name}/.logs"
+
+                # Force git to acknowledge the ignore
+                git -C "/home/$USER/projects/${worktree_name}" status --porcelain >/dev/null 2>&1
+            fi
+
+            # Create VS Code workspace file with simplified name but descriptive display name
+            local workspace_file="/home/$USER/projects/${worktree_name}/${worktree_name}.code-workspace"
+            cat > "${workspace_file}" << EOF
 {
-        sp auto
-        clear
-        echo -e "Swapping to auto for a safe place to work."
-        echo -e "\nYour current list of worktrees:"
-        git worktree list
-        echo -e "\nRemoving worktree: auto-SFAP-$1"
-        rm -rf /home/$USER/projects/auto-SFAP-$1
-        echo -e "\nPruning your worktrees."
-        git worktree prune
-        echo -e "\nRemoving branch: auto-SFAP-$1"
-        git branch -D auto-SFAP-$1
-        echo -e "\nYour new list of worktrees:"
-        git worktree list
-	cd .. && ll
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "name": "${worktree_name}",
+    "settings": {
+        "search.exclude": {
+            "**/node_modules": true,
+            "**/bower_components": true,
+            "**/*.code-search": true,
+            "**/build/**": true,
+            "**/dist/**": true
+        },
+        "files.exclude": {
+            "**/.git": true,
+            "**/.svn": true,
+            "**/.hg": true,
+            "**/CVS": true,
+            "**/.DS_Store": true,
+            "**/Thumbs.db": true
+        },
+        "files.watcherExclude": {
+            "**/.git/objects/**": true,
+            "**/.git/subtree-cache/**": true,
+            "**/node_modules/**": true,
+            "**/build/**": true,
+            "**/dist/**": true
+        }
+    }
+}
+EOF
+            echo -e "\nSetting your project to: ${worktree_name}"
+            sp "${worktree_name}"
+
+            # Open VS Code with the workspace
+            code -n "${worktree_name}.code-workspace"
+
+            # Return to projects directory
+            cd ~/projects
+            echo -e "\nWorktree setup complete. VS Code workspace opened in new window."
+            echo -e "\nYour current list of worktrees:"
+            git worktree list
+            ;;
+
+        d) # Delete worktree
+            echo -e "\nYour current list of worktrees:"
+            git worktree list
+            echo -e "\nRemoving worktree: ${worktree_name}"
+            rm -rf "/home/$USER/projects/${worktree_name}"
+            echo -e "\nPruning your worktrees."
+            git worktree prune
+            echo -e "\nRemoving branch: ${worktree_name}"
+            git branch -D "${worktree_name}"
+
+            # Remove from VS Code recent workspaces
+            local storage_path="$HOME/.config/Code/User/workspaceStorage"
+            local vscode_state="$HOME/.config/Code/User/globalStorage/state.vscdb"
+
+            # Remove workspace storage directory if it exists
+            if [ -d "$storage_path" ]; then
+                find "$storage_path" -type d -name "*${worktree_name}*" -exec rm -rf {} +
+            fi
+
+            # Remove from VSCode state DB if sqlite3 is available
+            if command -v sqlite3 >/dev/null 2>&1; then
+                if [ -f "$vscode_state" ]; then
+                    sqlite3 "$vscode_state" "DELETE FROM ItemTable WHERE value LIKE '%${worktree_name}%';"
+                fi
+            fi
+
+            cd .. && ll
+            ;;
+    esac
+
+    echo -e "\nYour new list of worktrees:"
+    git worktree list
 }
 
 
@@ -939,4 +910,80 @@ export PYTHONPATH="${PYTHONPATH}:/home/bbell/sandbox/projects/personal/reading_t
 function hs()
 {
 	history | grep '$1'
+}
+
+function select_project() {
+    local projects=("$@")
+    local num_projects=${#projects[@]}
+
+    # Print header
+    echo "╭──────────────[ Project Selector ]──────────────╮"
+    echo "│ Found ${num_projects} projects                                │"
+    echo "│─────────────────────────────────────────────────│"
+
+    # Print projects
+    for i in "${!projects[@]}"; do
+        printf "│  %d) %-42s │\n" "$((i+1))" "${projects[i]}"
+    done
+    printf "│  0) Exit                                        │\n"
+    echo "╰─────────────────────────────────────────────────╯"
+
+    # Get user selection with trap for Ctrl+C
+    local selection
+    trap 'echo -e "\nExiting project selector..."; return 1' INT
+    while true; do
+        read -rp "• Select project (0-${num_projects}): " selection
+
+        # Check for exit condition
+        if [[ "$selection" == "0" ]]; then
+            echo "Exiting project selector..."
+            return 1
+        fi
+
+        # Validate input
+        if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -le "$num_projects" ] && [ "$selection" -gt 0 ]; then
+            break
+        fi
+        echo "Invalid selection. Please choose between 0 and ${num_projects}"
+    done
+    trap - INT
+
+    # Return the selected project (array is 0-based, so subtract 1)
+    echo "${projects[$((selection-1))]}"
+}
+
+function code() {
+    # Try to connect to VS Code server
+    command code "$@" 2>/dev/null || {
+        local exit_code=$?
+
+        # If the error was due to server connection issues
+        if [[ $exit_code -eq 1 ]]; then
+            echo "VS Code server connection failed. Attempting to restart VS Code server..."
+
+            # Kill any existing VS Code processes
+            pkill -f "code" || true
+
+            # Clean up any stale socket files
+            rm -f /run/user/$UID/vscode-ipc-*.sock
+
+            # Wait for processes to fully terminate
+            sleep 2
+
+            # Start VS Code server in the background
+            /usr/bin/code --start-server &>/dev/null &
+
+            # Wait for server to initialize
+            sleep 3
+
+            # Try again
+            command code "$@" 2>/dev/null || {
+                echo "Error: Failed to start VS Code. Please check if VS Code is installed correctly."
+                return 1
+            }
+        else
+            echo "Error: Failed to open VS Code (exit code: $exit_code)"
+            return $exit_code
+        fi
+    }
 }
