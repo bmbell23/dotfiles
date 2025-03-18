@@ -17,12 +17,12 @@ BOLD_BLUE="\[\033[1;34m\]"
 git_branch() {
     local branch=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
     if [ ! -z $branch ]; then
-        echo " ($branch)"
+        echo "($branch)"
     fi
 }
 
-# Set the prompt
-PS1="${BOLD_GREEN}\u${RESET}@${BOLD_BLUE}\h${RESET}:${CYAN}\w${YELLOW}\$(git_branch)${RESET}\$ "
+# Set the multi-line prompt with branch on its own line
+PS1="${BOLD_GREEN}\u${RESET}@${BOLD_BLUE}\h${RESET}\n${CYAN}\w${RESET}\n${YELLOW}\$(git_branch)${RESET}\n\$: "
 
 # Directory colors
 if [ -x /usr/bin/dircolors ]; then
