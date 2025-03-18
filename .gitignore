@@ -3,6 +3,3 @@ local.sh
 
 # Kanban board files
 .kanban/
-
-# VS Code Workspace files
-*.code-workspace
