@@ -168,14 +168,13 @@ sp() {
     show_kanban
 }
 
-# Project switching completion with subdirectory support
+# Project switching completion without subdirectory support
 _sp_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local projects_dir="$HOME/projects"
-
-    # Get all directories up to 2 levels deep, excluding hidden ones
-    # Add trailing slash to make directory navigation more convenient
-    COMPREPLY=($(compgen -W "$(find "$projects_dir" -mindepth 1 -maxdepth 2 -type d -not -path '*/\.*' | sed "s|$projects_dir/||" | sed 's|$|/|')" -- "$cur"))
+    
+    # Get only top-level directories, excluding hidden ones
+    COMPREPLY=($(compgen -W "$(find "$projects_dir" -mindepth 1 -maxdepth 1 -type d -not -path '*/\.*' | sed "s|$projects_dir/||")" -- "$cur"))
 }
 complete -F _sp_complete sp
 

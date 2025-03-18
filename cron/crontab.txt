@@ -4,6 +4,7 @@
 0 1 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_chain_report.sh # Daily chain report
 15 1 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_owned_report.sh # Daily owned books report
 30 1 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_report.sh # Daily reading progress report
+45 1 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_goals_report.sh # Daily goals report
 
 # Reading Tracker Database
 0 2 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_db_backup.sh # Daily database backup
