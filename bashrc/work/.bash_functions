@@ -926,14 +926,6 @@ function sql()
 	sqlite3 data/db/reading_list.db "$1"
 }
 
-# Shortcut function to Reorder Books within their
-#    respective chains of the database
-function rob()
-{
-	py scripts/database/reorder_chain.py $1 $2
-}
-export PYTHONPATH="${PYTHONPATH}:/home/bbell/sandbox/projects/personal/reading_tracker/reading_list"
-
 function hs()
 {
 	history | grep '$1'
