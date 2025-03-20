@@ -103,7 +103,7 @@ gvc() {
 sp() {
     WORKSPACE="/home/$USER/projects/$1"
 
-    local hour=$(date +%H)
+    local hour=$(date +%-H)  # Use %-H to remove leading zeros
     local name=${1:-$(whoami)}  # Use provided name or username if not provided
     local greeting
 
@@ -117,36 +117,36 @@ sp() {
     local BOLD="\033[1m"
 
     # Determine greeting and comment based on time of day
-    if (( hour >= 0 && hour < 12 )); then
+    if [ "$hour" -ge 0 ] && [ "$hour" -lt 12 ]; then
         greeting="Good morning"
         comment="Welcome back, are you ready for the day?"
-    elif (( hour >= 12 && hour < 17 )); then
+    elif [ "$hour" -ge 12 ] && [ "$hour" -lt 17 ]; then
         greeting="Good afternoon"
-    elif (( hour >= 17 && hour < 24 )); then
+    elif [ "$hour" -ge 17 ] && [ "$hour" -lt 24 ]; then
         greeting="Good evening"
     fi
 
     cd "$WORKSPACE"
 
     # Only show kanban board for specific projects
-    if [[ "$1" == "reading_tracker" || "$1" == "dotfiles" ]]; then
+    if [ "$1" = "reading_tracker" ] || [ "$1" = "dotfiles" ]; then
         echo -e "\n${YELLOW}Here's your kanban board for this project:${RESET}"
         show_kanban
-    fi
-
-    # Determine theme based on project type
-    local theme_name
-    if [[ "$1" == *"auto"* ]]; then
-        theme_name="mikasa rainbow"
-    elif [[ "$1" == *"sfaos"* ]]; then
-        theme_name="Monokai"
-    else
-        theme_name="Default Dark+"  # fallback theme
     fi
 
     # Look for and launch workspace file, create if missing
     local workspace_file="${1}.code-workspace"
     if [ ! -f "$workspace_file" ]; then
+        # Determine theme based on project type only for new workspace files
+        local theme_name
+        if [[ "$1" == *"auto"* ]]; then
+            theme_name="mikasa rainbow"
+        elif [[ "$1" == *"sfaos"* ]]; then
+            theme_name="Monokai"
+        else
+            theme_name="Default Dark+"  # fallback theme
+        fi
+
         cat > "${workspace_file}" << EOF
 {
     "folders": [
@@ -183,13 +183,6 @@ sp() {
 }
 EOF
         echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
-    else
-        # Update existing workspace file's theme
-        sed -i "s/\"workbench.colorTheme\": \".*\"/\"workbench.colorTheme\": \"${theme_name}\"/" "$workspace_file"
-        if ! grep -q "workbench.colorTheme" "$workspace_file"; then
-            # If theme setting doesn't exist, add it to settings object
-            sed -i "/\"settings\": {/a \        \"workbench.colorTheme\": \"${theme_name}\"," "$workspace_file"
-        fi
     fi
 
     # Launch workspace in VS Code
