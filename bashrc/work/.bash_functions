@@ -29,64 +29,6 @@ function cdl()
     ll
 }
 
-# This function creates a GIT worktree
-# The name of the worktree must match a git repo branch name
-function gworktree()
-{
-    name=$1
-    if [[ -z "$name" ]]; then
-        echo "Must provide a worktree name"
-        return 1
-    fi
-
-	# CD to a known good starting point for Git
-	sp sfaos
-
-	if [ -d ../$name ]; then
-	    echo "$name branch or worktree already exists."
-	    return 1
-	fi
-
-	git worktree add -b $name ../$name origin/$name
-
-	sp $name
-	cd janus/test/scripts
-	ln -s /home/$USER/work/projects/auto/lib
-
-	cd ../monty
-	env/venv.sh
-	sp $name
-}
-
-# This function deletes a GIT worktree AND Branch
-# The name of the worktree must match the name of the branch
-function dworktree()
-{
-    name=$1
-    if [[ -z "$name" ]]; then
-        echo "Must provide a worktree name"
-        return 1
-    fi
-	BRPTR="/home/$USER/work/projects/$name"
-    if [[ ! -d $BRPTR ]]; then
-        echo "'${BRPTR}' worktree not found."
-        return 1
-    fi
-
-	# CD to the branch and remove the lib
-    if [[ -d $BRPTR/janus/test/scripts/lib ]]; then
-		rm $BRPTR/janus/test/scripts/lib
-    fi
-
-	# CD to a known good repo
-	sp sfaos
-	rm -rf ../$name
-
-	git worktree prune
-	git branch -D $name
-}
-
-
 # Function: Code Load onto Controllers
 function codeload()
 {
@@ -420,12 +362,6 @@ function notes-bash()
 }
 
 # Function:
-function notes-bash()
-{
-	vim ~/notes/command-line-notes_bash.txt;
-}
-
-# Function:
 function glossary()
 {
   vim ~/notes/glossary.txt;
@@ -458,7 +394,7 @@ function greset()
 # repo: a (auto) or s (sfaos)
 # ticket: SFAP ticket number
 # upstream_branch: optional, defaults to master
-function tree() {
+function gwt() {
     # Validate arguments
     if [[ $# -lt 3 ]]; then
         echo "Usage: tree <action> <repo> <ticket> [upstream_branch]"
@@ -516,19 +452,19 @@ function tree() {
             local gitignore_file="/home/$USER/projects/${worktree_name}/.gitignore"
             local needs_workspace=true
             local needs_kanban=true
-            local needs_dotlogs=true
+            local needs_logs=true
 
             if [[ -f "${gitignore_file}" ]]; then
                 grep -q "^*.code-workspace$" "${gitignore_file}" && needs_workspace=false
                 grep -q "^.kanban/$" "${gitignore_file}" && needs_kanban=false
-                grep -q "^.logs$" "${gitignore_file}" && needs_dotlogs=false
+                grep -q "logs$" "${gitignore_file}" && needs_logs=false
             fi
 
             # Only append what's missing
             {
                 [[ "${needs_workspace}" == "true" ]] && echo "*.code-workspace"
                 [[ "${needs_kanban}" == "true" ]] && echo ".kanban/"
-                [[ "${needs_dotlogs}" == "true" ]] && echo ".logs"
+                [[ "${needs_logs}" == "true" ]] && echo "logs"
             } >> "${gitignore_file}"
 
             # If we made changes to .gitignore, commit them
@@ -549,8 +485,8 @@ function tree() {
                 echo -e "\nFound logs for SFAP-${ticket_number}, creating symlink..."
                 echo "Source: ${logs_source}"
 
-                # Create .logs as direct symlink to the logs source
-                ln -s "${logs_source}" "/home/$USER/projects/${worktree_name}/.logs"
+                # Create logs as direct symlink to the logs source
+                ln -s "${logs_source}" "/home/$USER/projects/${worktree_name}/logs"
 
                 # Force git to acknowledge the ignore
                 git -C "/home/$USER/projects/${worktree_name}" status --porcelain >/dev/null 2>&1
