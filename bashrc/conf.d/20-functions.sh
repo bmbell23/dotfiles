@@ -139,7 +139,9 @@ sp() {
     if [ ! -f "$workspace_file" ]; then
         # Determine theme based on project type only for new workspace files
         local theme_name
-        if [[ "$1" == *"auto"* ]]; then
+        if [ "$1" = "dotfiles" ]; then
+            theme_name="Pretty Pastel"
+        elif [[ "$1" == *"auto"* ]]; then
             theme_name="mikasa rainbow"
         elif [[ "$1" == *"sfaos"* ]]; then
             theme_name="Monokai"
@@ -342,7 +344,9 @@ function pp() {
 
     # Determine theme based on project type
     local theme_name
-    if [[ "${project_name}" == *"auto"* ]]; then
+    if [ "${project_name}" = "dotfiles" ]; then
+        theme_name="Pretty Pastel"
+    elif [[ "${project_name}" == *"auto"* ]]; then
         theme_name="mikasa rainbow"
     elif [[ "${project_name}" == *"sfaos"* ]]; then
         theme_name="Monokai"
