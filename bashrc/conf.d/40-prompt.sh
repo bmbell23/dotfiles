@@ -21,8 +21,8 @@ git_branch() {
     fi
 }
 
-# Set the multi-line prompt with branch on its own line
-PS1="${BOLD_GREEN}\u${RESET}@${BOLD_BLUE}\h${RESET}\n${CYAN}\w${RESET}\n${YELLOW}\$(git_branch)${RESET}\n"
+# Set the multi-line prompt without the branch
+PS1="${BOLD_GREEN}\u${RESET}@${BOLD_BLUE}\h${RESET}\n${CYAN}\w${RESET}\n"
 
 # Directory colors
 if [ -x /usr/bin/dircolors ]; then
