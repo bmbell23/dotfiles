@@ -37,4 +37,3 @@ fi
 if [ -f "${WORKSPACE}/.bash_variables" ]; then
     source "${WORKSPACE}/.bash_variables"
 fi
-. "$HOME/.cargo/env"
