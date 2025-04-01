@@ -302,9 +302,11 @@ function pp() {
     printf "%${RIGHT_PADDING}s" | tr " " "${HORIZONTAL}"
     echo -e "${TOP_RIGHT}${RESET}"
 
-    # Print project count
+    # Print project count with dynamic padding
+    local count_text="Found ${project_count} projects"
+    local count_padding=$((INNER_WIDTH - ${#count_text} - 2))  # -2 for the initial space and border
     echo -en "${CYAN}${VERTICAL}${RESET} Found ${GREEN}${BOLD}${project_count}${RESET} projects"
-    printf "%$((INNER_WIDTH - 18))s" ""
+    printf "%${count_padding}s" ""
     echo -e "${CYAN}${VERTICAL}${RESET}"
 
     # Print separator
