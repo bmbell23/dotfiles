@@ -451,19 +451,16 @@ function gwt() {
             # Update .gitignore first
             local gitignore_file="/home/$USER/projects/${worktree_name}/.gitignore"
             local needs_workspace=true
-            local needs_kanban=true
             local needs_logs=true
 
             if [[ -f "${gitignore_file}" ]]; then
                 grep -q "^*.code-workspace$" "${gitignore_file}" && needs_workspace=false
-                grep -q "^.kanban/$" "${gitignore_file}" && needs_kanban=false
                 grep -q "logs$" "${gitignore_file}" && needs_logs=false
             fi
 
             # Only append what's missing
             {
                 [[ "${needs_workspace}" == "true" ]] && echo "*.code-workspace"
-                [[ "${needs_kanban}" == "true" ]] && echo ".kanban/"
                 [[ "${needs_logs}" == "true" ]] && echo "logs"
             } >> "${gitignore_file}"
 
@@ -473,22 +470,12 @@ function gwt() {
                 git -C "/home/$USER/projects/${worktree_name}" commit -m "chore: Update .gitignore with standard exclusions"
             fi
 
-            # Create .kanban directory and its files
-            mkdir -p "/home/$USER/projects/${worktree_name}/.kanban"
-            touch "/home/$USER/projects/${worktree_name}/.kanban/backlog.txt"
-            touch "/home/$USER/projects/${worktree_name}/.kanban/wip.txt"
-            touch "/home/$USER/projects/${worktree_name}/.kanban/done.txt"
-
             # Symlink logs if they exist
             local logs_source="/home/logs/SFAP-${ticket_number}"
             if [[ -d "${logs_source}" ]]; then
                 echo -e "\nFound logs for SFAP-${ticket_number}, creating symlink..."
                 echo "Source: ${logs_source}"
-
-                # Create logs as direct symlink to the logs source
                 ln -s "${logs_source}" "/home/$USER/projects/${worktree_name}/logs"
-
-                # Force git to acknowledge the ignore
                 git -C "/home/$USER/projects/${worktree_name}" status --porcelain >/dev/null 2>&1
             fi
 
