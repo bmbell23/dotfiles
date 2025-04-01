@@ -135,42 +135,29 @@ alias vp='less $NOTE_PERSONAL'
 # Build a PEM kit with your current checkout.  -D is for development, and -K is with no unified firmware.
 alias pemkit='sudo platform/make_flash -D -K PEM local . debug'
 
-
 alias django='godjango;/home/bbell/work/projects/sfaos/janus/test/monty/py3 manage.py runserver 10.36.28.88:8000'
-
 
 alias gomonty='cd ~/work/projects/monty/janus/test/monty'
 
-
 alias godjango='sp sfaos;cd ~/work/projects/sfaos/janus/test/monty/django_server/mysite'
-
 
 alias gs='git status'
 
-
 alias lint='./linter.sh -H'
-
 
 alias gb='git branch'
 
-
 alias monty='cd janus/test/monty;rm py3;env/venv.sh'
-
 
 alias gp='git pull'
 
-
 alias gl='git log'
-
 
 alias vcj='journalctl --utc -D var/log/journal --list-boots'
 
-
 alias mca='make cleanall;make;sudo rm -rf /tmp/janus_shared*'
 
-
 alias sfaos='sp sfaos'
-
 
 alias home='clear;cd;ll'
 
