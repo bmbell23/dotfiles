@@ -16,10 +16,12 @@ source "${HOME}/projects/dotfiles/bashrc/work/.bash_functions"
 source "${HOME}/projects/dotfiles/bashrc/work/.bash_aliases"
 source "${HOME}/projects/dotfiles/bashrc/work/.bash_variables"
 
-# Source project specific bashrc if it exists
-if [ -f "${WORKSPACE}/.bashrc" ]; then
-    source "${WORKSPACE}/config/shell/.bash_*"
-fi
+# Source project specific shell configurations if they exist
+for config in "${WORKSPACE}/config/shell/.bash_"*; do
+    if [ -f "$config" ]; then
+        source "$config"
+    fi
+done
 
 # Source project specific bash aliases if it exists
 if [ -f "${WORKSPACE}/.bash_aliases" ]; then
