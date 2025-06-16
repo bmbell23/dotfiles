@@ -123,9 +123,6 @@ alias gr='git review'
 # Send 'git review -R'
 alias gR='git review -R'
 
-
-alias gd='git diff'
-
 # Effectively abandon all of your changes, and do a fresh pull.
 alias ga='git checkout -- .;gp'
 
@@ -153,8 +150,6 @@ alias gb='git branch'
 alias monty='cd janus/test/monty;rm py3;env/venv.sh'
 
 alias gp='git pull'
-
-alias gl='git log'
 
 alias vcj='journalctl --utc -D var/log/journal --list-boots'
 
