@@ -8,7 +8,7 @@ alias lt='ls -lt'
 
 # Git aliases
 alias gs='git status'
-alias gl='git log'
+alias gl='git log --name-only'
 alias gd='git diff'
 alias gco='git checkout'
 alias gcb='git checkout -b'
