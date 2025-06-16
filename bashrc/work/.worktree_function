@@ -1,0 +1,235 @@
+function worktree() {
+    # Set base projects directory and repository name
+    local projects_dir="$HOME/work/projects"
+    local repo_name="sfaos"  # Change this to your repository name if different
+
+    # Internal function to switch projects (replacement for sp)
+    function _sp() {
+        local project_name="$1"
+        cd "${projects_dir}/${project_name}" 2>/dev/null
+        if [ $? -ne 0 ]; then
+            echo "Error: Could not change to project directory: ${projects_dir}/${project_name}"
+            return 1
+        fi
+        echo "Project is now $project_name"
+    }
+
+    # Display help if requested
+    if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+        echo "Git Worktree Management Function"
+        echo "--------------------------------"
+        echo "Usage: worktree <action> <ticket> [upstream_branch]"
+        echo ""
+        echo "Actions:"
+        echo "  -c, --create   Create a new worktree for the specified ticket"
+        echo "  -d, --delete   Remove an existing worktree for the specified ticket"
+        echo "  -h, --help     Display this help message"
+        echo ""
+        echo "Arguments:"
+        echo "  ticket         The ticket identifier in any of these formats:"
+        echo "                 - 12345 (just the number)"
+        echo "                 - SFAP-12345 (standard format)"
+        echo "                 - SFAP-12345-bug-fix-for-IPMI (with additional descriptive text)"
+        echo "                 The full ticket name will be used for the worktree/branch name"
+        echo "                 (e.g., 'SFAP-12345-bug-fix-for-IPMI')"
+        echo ""
+        echo "  upstream_branch (optional)"
+        echo "                 The branch to use as upstream (default: master)"
+        echo ""
+        echo "Examples:"
+        echo "  worktree -c 12345                       # Create worktree for SFAP-12345 based on master"
+        echo "  worktree -c SFAP-12345                  # Same as above"
+        echo "  worktree -c SFAP-12345-bug-fix-for-IPMI # Same as above"
+        echo "  worktree -c 12345 12.7-branch           # Create worktree based on 12.7-branch branch"
+        echo "  worktree -d 12345                       # Delete worktree for SFAP-12345"
+        echo "  worktree -d SFAP-12345                  # Same as above"
+        echo "  worktree -d SFAP-12345-bug-fix-for-IPMI # Same as above"
+        return 0
+    fi
+
+    # Validate arguments
+    if [[ $# -lt 2 ]]; then
+        echo "Error: Insufficient arguments"
+        echo "Usage: worktree <action> <ticket> [upstream_branch]"
+        echo "Run 'worktree --help' for more information"
+        return 1
+    fi
+
+    # Parse arguments
+    local action="$1"
+    local ticket="$2"
+    local upstream_branch="${3:-master}"
+    local worktree_name
+    local ticket_number
+
+    # Extract the 5-digit ticket number for logs directory
+    if [[ $ticket =~ SFAP-([0-9]{5}) ]]; then
+        # Format: SFAP-12345 or SFAP-12345-something-else
+        ticket_number="${BASH_REMATCH[1]}"
+    elif [[ $ticket =~ ^([0-9]{5}) ]]; then
+        # Format: 12345
+        ticket_number="${BASH_REMATCH[1]}"
+    else
+        # Use as is if no pattern matches
+        ticket_number="$ticket"
+    fi
+
+    # Validate action
+    case "$action" in
+        -c|--create|-d|--delete) ;;
+        *) echo "Invalid action. Use '-c/--create' for create or '-d/--delete' for delete"; return 1 ;;
+    esac
+
+    # Format the ticket for the worktree name
+    # If it's just a number, add SFAP- prefix
+    if [[ $ticket =~ ^[0-9]{5}$ ]]; then
+        worktree_name="SFAP-${ticket}"
+    # If it doesn't start with SFAP-, add it
+    elif [[ ! $ticket =~ ^SFAP- ]]; then
+        worktree_name="SFAP-${ticket}"
+    else
+        # Use the full ticket name as is
+        worktree_name="${ticket}"
+    fi
+
+    # Switch to base repository
+    _sp "${repo_name}"
+    clear
+    echo -e "Swapping to ${repo_name} for a safe place to work."
+
+    # Ensure we're in a git repository
+    if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+        echo -e "Error: Not in a git repository. Trying to navigate to the ${repo_name} repository..."
+        cd "${projects_dir}/${repo_name}" 2>/dev/null
+        if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+            echo -e "Error: Could not find a git repository at ${projects_dir}/${repo_name}"
+            echo -e "Please make sure the ${repo_name} repository exists at ${projects_dir}/${repo_name}"
+            echo -e "or change the 'repo_name' variable at the top of this function to match your repository name."
+            return 1
+        fi
+        echo -e "Successfully navigated to the ${repo_name} repository."
+    fi
+
+    case "$action" in
+        -c|--create) # Create worktree
+            echo -e "\n=== Creating worktree for ticket SFAP-${ticket_number} ==="
+            echo -e "Worktree name: ${worktree_name}"
+            echo -e "Location: ${projects_dir}/${worktree_name}"
+            echo -e "Upstream branch: origin/${upstream_branch}"
+            echo -e "\nStep 1: Creating local branch '${worktree_name}'..."
+            git branch "${worktree_name}"
+            echo -e "\nStep 2: Adding worktree..."
+            git worktree add "${projects_dir}/${worktree_name}" "${worktree_name}"
+            echo -e "\nStep 3: Setting upstream branch to 'origin/${upstream_branch}'..."
+            git branch --set-upstream-to="origin/${upstream_branch}" "${worktree_name}"
+
+            # Symlink logs if they exist
+            echo -e "\nStep 4: Checking for logs directory..."
+            local logs_source="/home/logs/SFAP-${ticket_number}"
+            if [[ -d "${logs_source}" ]]; then
+                echo -e "Found logs for SFAP-${ticket_number}, creating symlink"
+                echo -e "  Source: ${logs_source}"
+                echo -e "  Target: ${projects_dir}/${worktree_name}/logs"
+                ln -s "${logs_source}" "${projects_dir}/${worktree_name}/logs"
+                echo -e "Logs symlink created successfully"
+            else
+                echo -e "No logs directory found at ${logs_source}"
+            fi
+
+            echo -e "\nSetting your project to: ${worktree_name}"
+            _sp "${worktree_name}"
+
+            # Setup lib symlink and virtual environment
+            echo -e "\nStep 5: Setting up development environment..."
+            local scripts_dir="${projects_dir}/${worktree_name}/janus/test/scripts"
+            local monty_dir="${projects_dir}/${worktree_name}/janus/test/monty"
+
+            if [[ -d "$scripts_dir" ]]; then
+                echo -e "Creating lib symlink for SFAOS"
+                echo -e "  Directory: $scripts_dir"
+                echo -e "  Linking to: ${projects_dir}/auto/lib"
+                cd "$scripts_dir"
+                ln -s "${projects_dir}/auto/lib"
+                echo -e "Lib symlink created successfully"
+            else
+                echo -e "Scripts directory not found at $scripts_dir"
+            fi
+
+            if [[ -d "$monty_dir" ]]; then
+                echo -e "\nSetting up Python virtual environment"
+                echo -e "  Directory: $monty_dir"
+                cd "$monty_dir"
+                env/venv.sh
+                echo -e "Virtual environment setup complete"
+            else
+                echo -e "Monty directory not found at $monty_dir"
+            fi
+
+            # Return to projects directory
+            echo -e "\nStep 6: Returning to projects directory..."
+            cd "${projects_dir}"
+            echo -e "\n=== Worktree setup complete ==="
+
+            # Make sure we're in the base repository before listing worktrees
+            echo -e "\nNavigating to ${repo_name} repository to show worktree status..."
+            cd "${projects_dir}/${repo_name}"
+            if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+                echo -e "Warning: Could not navigate to ${repo_name} repository to show worktree status."
+            else
+                echo -e "Your current list of worktrees:"
+                git worktree list
+            fi
+            ;;
+
+        -d|--delete) # Delete worktree
+            echo -e "\n=== Deleting worktree for ticket SFAP-${ticket_number} ==="
+            echo -e "Worktree name: ${worktree_name}"
+            echo -e "Location: ${projects_dir}/${worktree_name}"
+
+            echo -e "\nCurrent worktrees before deletion:"
+            # Make sure we're in the base repository before listing worktrees
+            if ! git rev-parse --is-inside-work-tree &>/dev/null || [[ $(basename $(git rev-parse --show-toplevel 2>/dev/null) 2>/dev/null) != "${repo_name}" ]]; then
+                echo -e "Navigating to ${repo_name} repository to show worktree status..."
+                cd "${projects_dir}/${repo_name}"
+                if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+                    echo -e "Warning: Could not navigate to ${repo_name} repository to show worktree status."
+                fi
+            fi
+            git worktree list
+
+            echo -e "\nStep 1: Removing worktree directory..."
+            rm -rf "${projects_dir}/${worktree_name}"
+
+            echo -e "\nStep 2: Pruning worktree references..."
+            git worktree prune
+
+            echo -e "\nStep 3: Removing local branch '${worktree_name}'..."
+            git branch -D "${worktree_name}"
+
+            echo -e "\nChanging directory to parent folder..."
+            cd .. && ls -la
+            ;;
+    esac
+
+    echo -e "\n=== Final worktree status ==="
+
+    # Always navigate directly to the base repository for final status
+    echo -e "Navigating to ${repo_name} repository to show final worktree status..."
+    cd "${projects_dir}/${repo_name}"
+
+    if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+        echo -e "Warning: Could not navigate to ${repo_name} repository to show worktree status."
+        echo -e "\nWorktree operation completed, but cannot display current worktrees."
+    else
+        echo -e "Your current list of worktrees:"
+        git worktree list
+    fi
+
+    echo -e "\nWorktree operation completed successfully."
+
+    # If this was a create operation, switch to the new worktree
+    if [[ "$action" == "-c" || "$action" == "--create" ]]; then
+        echo -e "\nSwitching to the new worktree: ${worktree_name}"
+        _sp "${worktree_name}"
+    fi
+}

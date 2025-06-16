@@ -11,13 +11,16 @@ alias ps_skp="cd ~/sandbox/projects/personal/stephen_king_website_parser && ./se
 alias py="python3"
 
 #
-alias proj="cd ~/work/projects;clear;ll"
+alias proj="cd ~/projects;clear;ll"
 
 #
 alias template="sp sfaos;cd janus/test/monty;time py3 frontend.py -e Template"
 
 #
 alias space="sudo du -h --max-depth=1 | sort -hr"
+
+#
+alias cmt="cd ~/projects/sfaos/janus/test/monty/ && env/venv.sh && time py3 frontend.py -e Template"
 
 #
 alias disk="sudo du -shc * | sort -h"
@@ -49,7 +52,7 @@ alias ctime="cat /etc/timezone;ls -alh /etc/localtime"
 alias lv="perl ~/work/general/tools/scripts/lv.pl"
 
 # Create a PEM Kit
-alias cpk="sudo platform/make_flash -D -K PEM local . debug"
+alias cpk="cd ~/projects/sfaos; gp; sudo platform/make_flash -D -K PEM local . debug"
 
 
 alias dock="ssh core@10.36.28.254 -i /home/auto/docker/flatcar/id_rsa"

@@ -194,7 +194,7 @@ EOF
 # Project switching completion without subdirectory support
 _sp_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
-    local projects_dir="$HOME/projects"
+    local projects_dir="$HOME/work/projects"
 
     # Get only top-level directories, excluding hidden ones
     COMPREPLY=($(compgen -W "$(find "$projects_dir" -mindepth 1 -maxdepth 1 -type d -not -path '*/\.*' | sed "s|$projects_dir/||")" -- "$cur"))
@@ -257,6 +257,9 @@ function pp() {
     local YELLOW="\033[0;33m"
     local BLUE="\033[0;34m"
     local PURPLE="\033[0;35m"
+    local PINK="\033[1;35m"  # Bright/bold magenta for auto projects
+    local ORANGE="\033[0;33m\033[1m"  # Bold yellow for orange effect for sfaos projects
+    local GRAY="\033[0;37m"  # Gray for everything else
     local CYAN="\033[0;36m"
     local WHITE="\033[1;37m"
     local RESET="\033[0m"
@@ -314,11 +317,20 @@ function pp() {
     printf "%$((INNER_WIDTH - 1))s" | tr " " "${HORIZONTAL}"
     echo -e "${VERTICAL}${RESET}"
 
-    # Display projects
+    # Display projects with color coding
     for ((i=0; i<project_count; i++)); do
         local num=$((i + 1))
+        local project_color="${GRAY}"  # Default color for everything else
+
+        # Set color based on project name
+        if [[ "${projects[$i]}" == auto* ]]; then
+            project_color="${PINK}"  # Auto projects in pink
+        elif [[ "${projects[$i]}" == sfaos* ]]; then
+            project_color="${ORANGE}"  # SFAOS projects in orange
+        fi
+        
         echo -en "${CYAN}${VERTICAL}${RESET} "
-        printf "${YELLOW}%2d${RESET}) %-${max_length}s" $num "${projects[$i]}"
+        printf "%2d${RESET}) ${project_color}%-${max_length}s${RESET}" $num "${projects[$i]}"
         printf "%${SIDE_PADDING}s" ""
         echo -e "${CYAN}${VERTICAL}${RESET}"
     done
@@ -341,7 +353,16 @@ function pp() {
     # Switch to selected project
     local index=$((selection - 1))
     local project_name="${projects[$index]}"
-    echo -e "\n${GREEN}Switching to project: ${WHITE}${BOLD}${project_name}${RESET}"
+    
+    # Color the project name in the confirmation message based on type
+    local confirm_color="${GRAY}"
+    if [[ "${project_name}" == auto* ]]; then
+        confirm_color="${PINK}"
+    elif [[ "${project_name}" == sfaos* ]]; then
+        confirm_color="${ORANGE}"
+    fi
+    
+    echo -e "\n${WHITE}Switching to project: ${confirm_color}${BOLD}${project_name}${RESET}"
     sp "${project_name}"
 
     # Determine theme based on project type

@@ -19,7 +19,35 @@ function gitdb()
 # Function: Install a PEM Kit
 function ipk()
 {
-    sudo /ddn/install/upgrade_fw.sh $1
+    local pem_kit="$1"
+
+    # If no argument provided, find the kit in the highest version directory
+    if [ -z "$pem_kit" ]; then
+        local base_dir="/home/cilogs/pem_kits"
+
+        # Find the highest version directory using version sort
+        local latest_version=$(ls -1 "$base_dir" | grep -E '^[0-9]+\.[0-9]+$' | sort -V | tail -1)
+
+        if [ -z "$latest_version" ]; then
+            echo "Error: No version directories found in $base_dir"
+            return 1
+        fi
+
+        local kit_dir="$base_dir/$latest_version/"
+        echo "Using latest version directory: $kit_dir"
+
+        # Find the PEM kit in the latest version directory
+        pem_kit=$(find "$kit_dir" -name "ddn-flash-PEM-*-dev-Debug.nojanus.tar.zst" -type f | head -1)
+
+        if [ -z "$pem_kit" ]; then
+            echo "Error: No PEM kit found matching pattern 'ddn-flash-PEM-*-dev-Debug.nojanus.tar.zst' in $kit_dir"
+            return 1
+        fi
+
+        echo "Using PEM kit: $pem_kit"
+    fi
+
+    sudo /ddn/install/upgrade_fw.sh "$pem_kit"
 }
 
 # Function: Navigate to a directory and long list
