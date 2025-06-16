@@ -144,7 +144,7 @@ alias gomonty='cd ~/work/projects/monty/janus/test/monty'
 
 alias godjango='sp sfaos;cd ~/work/projects/sfaos/janus/test/monty/django_server/mysite'
 
-alias gs='git status'
+alias gs='git status --untracked-files=all'
 
 alias lint='./linter.sh -H'
 
