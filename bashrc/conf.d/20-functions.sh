@@ -363,6 +363,9 @@ function pp() {
     fi
     
     echo -e "\n${WHITE}Switching to project: ${confirm_color}${BOLD}${project_name}${RESET}"
+
+    # Save current directory before switching
+    local original_dir="$(pwd)"
     sp "${project_name}"
 
     # Determine theme based on project type
@@ -427,4 +430,7 @@ EOF
 
     # Launch workspace in VS Code
     code -n "$workspace_file"
+
+    # Return to original directory
+    cd "$original_dir"
 }
