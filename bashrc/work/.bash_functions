@@ -476,28 +476,6 @@ function gwt() {
             git worktree add "/home/$USER/projects/${worktree_name}" "${worktree_name}"
             git branch --set-upstream-to="origin/${upstream_branch}" "${worktree_name}"
 
-            # Update .gitignore first
-            local gitignore_file="/home/$USER/projects/${worktree_name}/.gitignore"
-            local needs_workspace=true
-            local needs_logs=true
-
-            if [[ -f "${gitignore_file}" ]]; then
-                grep -q "^*.code-workspace$" "${gitignore_file}" && needs_workspace=false
-                grep -q "logs$" "${gitignore_file}" && needs_logs=false
-            fi
-
-            # Only append what's missing
-            {
-                [[ "${needs_workspace}" == "true" ]] && echo "*.code-workspace"
-                [[ "${needs_logs}" == "true" ]] && echo "logs"
-            } >> "${gitignore_file}"
-
-            # If we made changes to .gitignore, commit them
-            if git -C "/home/$USER/projects/${worktree_name}" status --porcelain | grep -q ".gitignore"; then
-                git -C "/home/$USER/projects/${worktree_name}" add .gitignore
-                git -C "/home/$USER/projects/${worktree_name}" commit -m "chore: Update .gitignore with standard exclusions"
-            fi
-
             # Symlink logs if they exist
             local logs_source="/home/logs/SFAP-${ticket_number}"
             if [[ -d "${logs_source}" ]]; then
