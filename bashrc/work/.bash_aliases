@@ -109,13 +109,37 @@ alias aa='sp sfaos;cd janus;analyzer'
 alias bm='cd /home/department_folders/FTP/COLORADO/eng/Buildmeister/Internal'
 
 
-alias gaca='git add .;git commit --amend'
+# Git add, commit, and amend with conditional linting
+gaca() {
+    # Check if we're in the monty directory
+    if [[ $(basename "$PWD") == "monty" ]]; then
+        echo "Running lint in monty directory..."
+        if ! lint; then
+            echo "Lint failed! Aborting commit."
+            return 1
+        fi
+    fi
+    git add .
+    git commit --amend "$@"
+}
 
 
 alias sfaos='sp sfaos'
 
 
-alias gac='git add .;git commit'
+# Git add and commit with conditional linting
+gac() {
+    # Check if we're in the monty directory
+    if [[ $(basename "$PWD") == "monty" ]]; then
+        echo "Running lint in monty directory..."
+        if ! lint; then
+            echo "Lint failed! Aborting commit."
+            return 1
+        fi
+    fi
+    git add .
+    git commit "$@"
+}
 
 # Send 'git review'
 alias gr='git review'

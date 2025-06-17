@@ -425,10 +425,11 @@ function greset()
 function gwt() {
     # Validate arguments
     if [[ $# -lt 3 ]]; then
-        echo "Usage: tree <action> <repo> <ticket> [upstream_branch]"
-        echo "action: g (generate) or d (delete)"
+        echo "Usage: gwt <action> <repo> <ticket|old_name> [new_name|upstream_branch]"
+        echo "action: g (generate), d (delete), or r (rename)"
         echo "repo: a (auto) or s (sfaos)"
-        echo "ticket: SFAP ticket number"
+        echo "ticket: SFAP ticket number (for g/d) or old worktree name (for r)"
+        echo "For rename: gwt r <repo> <old_worktree_name> <new_worktree_name>"
         return 1
     fi
 
@@ -440,18 +441,32 @@ function gwt() {
     local base_repo
     local worktree_name
     local ticket_number
+    local old_worktree_name
+    local new_worktree_name
 
-    # Extract the 5-digit ticket number
-    if [[ $ticket =~ ^([0-9]{5}) ]]; then
-        ticket_number="${BASH_REMATCH[1]}"
+    # Handle rename action differently
+    if [[ "$action" == "r" ]]; then
+        # For rename: gwt r <repo> <old_worktree_name> <new_worktree_name>
+        if [[ $# -lt 4 ]]; then
+            echo "Error: Rename requires 4 arguments"
+            echo "Usage: gwt r <repo> <old_worktree_name> <new_worktree_name>"
+            return 1
+        fi
+        old_worktree_name="$3"
+        new_worktree_name="$4"
     else
-        ticket_number="$ticket"
+        # Extract the 5-digit ticket number for generate/delete
+        if [[ $ticket =~ ^([0-9]{5}) ]]; then
+            ticket_number="${BASH_REMATCH[1]}"
+        else
+            ticket_number="$ticket"
+        fi
     fi
 
     # Validate action
     case "$action" in
-        g|d) ;;
-        *) echo "Invalid action. Use 'g' for generate or 'd' for delete"; return 1 ;;
+        g|d|r) ;;
+        *) echo "Invalid action. Use 'g' for generate, 'd' for delete, or 'r' for rename"; return 1 ;;
     esac
 
     # Set base repository
@@ -462,7 +477,11 @@ function gwt() {
     esac
 
     # Set worktree name
-    worktree_name="${base_repo}-SFAP-${ticket}"
+    if [[ "$action" == "r" ]]; then
+        worktree_name="$old_worktree_name"  # For rename, we start with the old name
+    else
+        worktree_name="${base_repo}-SFAP-${ticket}"
+    fi
 
     # Switch to base repository
     sp "$base_repo"
@@ -588,6 +607,51 @@ EOF
             fi
 
             cd .. && ll
+            ;;
+
+        r) # Rename worktree
+            echo -e "\nYour current list of worktrees:"
+            git worktree list
+
+            # Validate that the old worktree exists
+            if [[ ! -d "/home/$USER/projects/${old_worktree_name}" ]]; then
+                echo "Error: Worktree '${old_worktree_name}' does not exist"
+                return 1
+            fi
+
+            # Validate that the new worktree name doesn't already exist
+            if [[ -d "/home/$USER/projects/${new_worktree_name}" ]]; then
+                echo "Error: Worktree '${new_worktree_name}' already exists"
+                return 1
+            fi
+
+            echo -e "\nRenaming worktree from '${old_worktree_name}' to '${new_worktree_name}'"
+
+            # Step 1: Rename the directory
+            mv "/home/$USER/projects/${old_worktree_name}" "/home/$USER/projects/${new_worktree_name}"
+
+            # Step 2: Update git worktree path
+            git worktree remove "${old_worktree_name}" 2>/dev/null || true
+            git worktree add "/home/$USER/projects/${new_worktree_name}" "${old_worktree_name}"
+
+            # Step 3: Rename the branch
+            git branch -m "${old_worktree_name}" "${new_worktree_name}"
+
+            # Step 4: Update the workspace file name and content
+            local old_workspace_file="/home/$USER/projects/${new_worktree_name}/${old_worktree_name}.code-workspace"
+            local new_workspace_file="/home/$USER/projects/${new_worktree_name}/${new_worktree_name}.code-workspace"
+
+            if [[ -f "$old_workspace_file" ]]; then
+                # Update the workspace name in the file content
+                sed -i "s/\"name\": \"${old_worktree_name}\"/\"name\": \"${new_worktree_name}\"/" "$old_workspace_file"
+                # Rename the workspace file
+                mv "$old_workspace_file" "$new_workspace_file"
+                echo -e "Updated workspace file: ${new_workspace_file}"
+            fi
+
+            echo -e "\nWorktree renamed successfully!"
+            echo -e "Old name: ${old_worktree_name}"
+            echo -e "New name: ${new_worktree_name}"
             ;;
     esac
 
