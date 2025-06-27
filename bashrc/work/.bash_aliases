@@ -105,20 +105,36 @@ alias gojanus='cd /home/bbell/work/projects/sfaos/janus'
 
 alias aa='sp sfaos;cd janus;analyzer'
 
+alias mut='./run_unit_tests.sh'
 
 alias bm='cd /home/department_folders/FTP/COLORADO/eng/Buildmeister/Internal'
 
 
-# Git add, commit, and amend with conditional linting
-gaca() {
+# Git add, commit, and amend with conditional linting and testing
+function gaca() {
+    local current_dir=$(basename "$PWD")
+
     # Check if we're in the monty directory
-    if [[ $(basename "$PWD") == "monty" ]]; then
+    if [[ "$current_dir" == "monty" ]]; then
         echo "Running lint in monty directory..."
-        if ! lint; then
+        if ! ./linter.sh; then
             echo "Lint failed! Aborting commit."
             return 1
         fi
+        echo "Running unit tests in monty directory..."
+        if ! ./run_unit_tests.sh; then
+            echo "Unit tests failed! Aborting commit."
+            return 1
+        fi
+    # Check if we're in auto directory (or directory containing "auto")
+    elif [[ "$current_dir" == "auto" || "$current_dir" == *"auto"* ]]; then
+        echo "Running unit tests in auto directory..."
+        if ! jenkins/tests/run_unit_tests.sh; then
+            echo "Unit tests failed! Aborting commit."
+            return 1
+        fi
     fi
+
     git add .
     git commit --amend "$@"
 }
@@ -127,16 +143,31 @@ gaca() {
 alias sfaos='sp sfaos'
 
 
-# Git add and commit with conditional linting
-gac() {
+# Git add and commit with conditional linting and testing
+function gac() {
+    local current_dir=$(basename "$PWD")
+
     # Check if we're in the monty directory
-    if [[ $(basename "$PWD") == "monty" ]]; then
+    if [[ "$current_dir" == "monty" ]]; then
         echo "Running lint in monty directory..."
-        if ! lint; then
+        if ! ./linter.sh; then
             echo "Lint failed! Aborting commit."
             return 1
         fi
+        echo "Running unit tests in monty directory..."
+        if ! ./run_unit_tests.sh; then
+            echo "Unit tests failed! Aborting commit."
+            return 1
+        fi
+    # Check if we're in auto directory (or directory containing "auto")
+    elif [[ "$current_dir" == "auto" || "$current_dir" == *"auto"* ]]; then
+        echo "Running unit tests in auto directory..."
+        if ! jenkins/tests/run_unit_tests.sh; then
+            echo "Unit tests failed! Aborting commit."
+            return 1
+        fi
     fi
+
     git add .
     git commit "$@"
 }
