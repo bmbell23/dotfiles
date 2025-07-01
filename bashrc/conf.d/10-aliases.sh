@@ -35,3 +35,7 @@ alias version-commit='version_commit.sh'  # Explicit version
 alias src='source ~/.bashrc'
 
 alias p='cd ~/projects && clear'
+
+alias series='reading-list series-stats --finished-only'
+
+alias brt='cd ~/projects/reading_tracker && source venv/bin/activate && source config/shell/.bash_functions && source config/shell/.bash_aliases'

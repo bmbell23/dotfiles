@@ -16,24 +16,20 @@ source "${HOME}/projects/dotfiles/bashrc/work/.bash_functions"
 source "${HOME}/projects/dotfiles/bashrc/work/.bash_aliases"
 source "${HOME}/projects/dotfiles/bashrc/work/.bash_variables"
 
-# Source project specific shell configurations if they exist
-for config in "${WORKSPACE}/config/shell/.bash_"*; do
-    if [ -f "$config" ]; then
-        source "$config"
+# Source project specific shell configurations
+if [ -d "${WORKSPACE}/config/shell" ]; then
+    for config_file in ".bash_functions" ".bash_aliases" ".bash_variables"; do
+        if [ -f "${WORKSPACE}/config/shell/${config_file}" ]; then
+            source "${WORKSPACE}/config/shell/${config_file}"
+        fi
+    done
+fi
+
+# For backwards compatibility, also check root directory
+for config_file in ".bash_functions" ".bash_aliases" ".bash_variables"; do
+    if [ -f "${WORKSPACE}/${config_file}" ]; then
+        source "${WORKSPACE}/${config_file}"
     fi
 done
 
-# Source project specific bash aliases if it exists
-if [ -f "${WORKSPACE}/.bash_aliases" ]; then
-    source "${WORKSPACE}/.bash_aliases"
-fi
-
-# Source project specific bash functions if it exists
-if [ -f "${WORKSPACE}/.bash_functions" ]; then
-    source "${WORKSPACE}/.bash_functions"
-fi
-
-# Source project specific bash variables if it exists
-if [ -f "${WORKSPACE}/.bash_variables" ]; then
-    source "${WORKSPACE}/.bash_variables"
-fi
+# direnv was removed to avoid conflicts with custom project setup

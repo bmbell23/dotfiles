@@ -116,20 +116,37 @@ sp() {
     local RESET="\033[0m"
     local BOLD="\033[1m"
 
-    # Determine greeting and comment based on time of day
-    if [ "$hour" -ge 0 ] && [ "$hour" -lt 12 ]; then
-        greeting="Good morning"
-        comment="Welcome back, are you ready for the day?"
-    elif [ "$hour" -ge 12 ] && [ "$hour" -lt 17 ]; then
-        greeting="Good afternoon"
-    elif [ "$hour" -ge 17 ] && [ "$hour" -lt 24 ]; then
-        greeting="Good evening"
-    fi
-
+    # Change to project directory
     cd "$WORKSPACE"
 
-    # Only show kanban board for specific projects
-    if [ "$1" = "reading_tracker" ] || [ "$1" = "dotfiles" ]; then
+    # Source project specific shell configurations
+    if [ -d "${WORKSPACE}/config/shell" ]; then
+        for config_file in ".bash_functions" ".bash_aliases" ".bash_variables"; do
+            if [ -f "${WORKSPACE}/config/shell/${config_file}" ]; then
+                source "${WORKSPACE}/config/shell/${config_file}"
+            fi
+        done
+    fi
+
+    # For backwards compatibility, also check root directory
+    for config_file in ".bash_functions" ".bash_aliases" ".bash_variables"; do
+        if [ -f "${WORKSPACE}/${config_file}" ]; then
+            source "${WORKSPACE}/${config_file}"
+        fi
+    done
+
+    # Special handling for reading_tracker project
+    if [ "$1" = "reading_tracker" ]; then
+        # Activate virtual environment if it exists
+        if [ -d "${WORKSPACE}/venv" ]; then
+            source "${WORKSPACE}/venv/bin/activate"
+            echo -e "${GREEN}Activated reading_tracker virtual environment${RESET}"
+        fi
+
+        echo -e "\n${YELLOW}Here's your kanban board for this project:${RESET}"
+        show_kanban
+    # Show kanban for dotfiles project
+    elif [ "$1" = "dotfiles" ]; then
         echo -e "\n${YELLOW}Here's your kanban board for this project:${RESET}"
         show_kanban
     fi
