@@ -282,14 +282,14 @@ function pp() {
     local RESET="\033[0m"
     local BOLD="\033[1m"
 
-    # Box drawing characters
-    local TOP_LEFT="╭"
-    local TOP_RIGHT="╮"
-    local BOTTOM_LEFT="╰"
-    local BOTTOM_RIGHT="╯"
-    local HORIZONTAL="─"
-    local VERTICAL="│"
-    local BULLET="•"
+    # Box drawing characters - using ASCII instead of Unicode
+    local TOP_LEFT="+"
+    local TOP_RIGHT="+"
+    local BOTTOM_LEFT="+"
+    local BOTTOM_RIGHT="+"
+    local HORIZONTAL="-"
+    local VERTICAL="|"
+    local BULLET="*"
 
     # Store projects in an array
     local projects=($(ls -d ~/projects/* | sed 's|/home/'$USER'/projects/||' | sort))
