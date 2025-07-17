@@ -417,51 +417,59 @@ function greset()
 }
 
 # Function: Manage Git Worktrees
-# Usage: tree <action> <repo> <ticket> [upstream_branch]
+# Usage: gwt <action> <repo> <ticket_number> <description> [upstream_branch]
 # action: g (generate) or d (delete)
 # repo: a (auto) or s (sfaos)
-# ticket: SFAP ticket number
+# ticket_number: SFAP ticket number (5 or 6 digits)
+# description: ticket description for branch name
 # upstream_branch: optional, defaults to master
+# Examples:
+#   gwt g s 12345 coupled-crash-issue master
+#   gwt g s 123456 other-issue 12.8-branch
+#   gwt d s 12345 coupled-crash-issue
+#   gwt r <repo> <old_worktree_name> <new_worktree_name>
 function gwt() {
-    # Validate arguments
-    if [[ $# -lt 3 ]]; then
-        echo "Usage: gwt <action> <repo> <ticket|old_name> [new_name|upstream_branch]"
-        echo "action: g (generate), d (delete), or r (rename)"
-        echo "repo: a (auto) or s (sfaos)"
-        echo "ticket: SFAP ticket number (for g/d) or old worktree name (for r)"
-        echo "For rename: gwt r <repo> <old_worktree_name> <new_worktree_name>"
-        return 1
-    fi
-
-    # Parse arguments
-    local action="$1"
-    local repo="$2"
-    local ticket="$3"
-    local upstream_branch="${4:-master}"
-    local base_repo
-    local worktree_name
-    local ticket_number
-    local old_worktree_name
-    local new_worktree_name
-
-    # Handle rename action differently
-    if [[ "$action" == "r" ]]; then
+    # Handle rename action differently (maintains old interface)
+    if [[ "$1" == "r" ]]; then
         # For rename: gwt r <repo> <old_worktree_name> <new_worktree_name>
         if [[ $# -lt 4 ]]; then
             echo "Error: Rename requires 4 arguments"
             echo "Usage: gwt r <repo> <old_worktree_name> <new_worktree_name>"
             return 1
         fi
-        old_worktree_name="$3"
-        new_worktree_name="$4"
+        local action="$1"
+        local repo="$2"
+        local old_worktree_name="$3"
+        local new_worktree_name="$4"
     else
-        # Extract the 5-digit ticket number for generate/delete
-        if [[ $ticket =~ ^([0-9]{5}) ]]; then
-            ticket_number="${BASH_REMATCH[1]}"
-        else
-            ticket_number="$ticket"
+        # For generate/delete: gwt <action> <repo> <ticket_number> <description> [upstream_branch]
+        if [[ $# -lt 4 ]]; then
+            echo "Usage: gwt <action> <repo> <ticket_number> <description> [upstream_branch]"
+            echo "action: g (generate) or d (delete)"
+            echo "repo: a (auto) or s (sfaos)"
+            echo "ticket_number: SFAP ticket number (5 or 6 digits)"
+            echo "description: ticket description for branch name"
+            echo "upstream_branch: optional, defaults to master"
+            echo ""
+            echo "Examples:"
+            echo "  gwt g s 12345 coupled-crash-issue master"
+            echo "  gwt g s 123456 other-issue 12.8-branch"
+            echo "  gwt d s 12345 coupled-crash-issue"
+            echo ""
+            echo "For rename: gwt r <repo> <old_worktree_name> <new_worktree_name>"
+            return 1
         fi
+
+        # Parse arguments for generate/delete
+        local action="$1"
+        local repo="$2"
+        local ticket_number="$3"
+        local description="$4"
+        local upstream_branch="${5:-master}"
     fi
+
+    local base_repo
+    local worktree_name
 
     # Validate action
     case "$action" in
@@ -480,7 +488,7 @@ function gwt() {
     if [[ "$action" == "r" ]]; then
         worktree_name="$old_worktree_name"  # For rename, we start with the old name
     else
-        worktree_name="${base_repo}-SFAP-${ticket}"
+        worktree_name="${base_repo}-SFAP-${ticket_number}-${description}"
     fi
 
     # Switch to base repository
