@@ -417,18 +417,22 @@ function greset()
 }
 
 # Function: Manage Git Worktrees
-# Usage: gwt <action> <repo> <ticket_number> <description> [upstream_branch]
+# Usage: gwt <action> <repo> <ticket_number> [description] [upstream_branch]
 # action: g (generate) or d (delete)
 # repo: a (auto) or s (sfaos)
 # ticket_number: SFAP ticket number (5 or 6 digits)
-# description: ticket description for branch name
+# description: ticket description for branch name (required for generate, optional for delete)
 # upstream_branch: optional, defaults to master
 # Examples:
 #   gwt g s 12345 coupled-crash-issue master
 #   gwt g s 123456 other-issue 12.8-branch
-#   gwt d s 12345 coupled-crash-issue
+#   gwt d s 12345 coupled-crash-issue  (traditional usage)
+#   gwt d s 12345                      (new: auto-find worktree by SFAP number)
 #   gwt r <repo> <old_worktree_name> <new_worktree_name>
 function gwt() {
+    # Save original directory to return to at the end
+    local original_dir="$(pwd)"
+
     # Handle rename action differently (maintains old interface)
     if [[ "$1" == "r" ]]; then
         # For rename: gwt r <repo> <old_worktree_name> <new_worktree_name>
@@ -442,21 +446,27 @@ function gwt() {
         local old_worktree_name="$3"
         local new_worktree_name="$4"
     else
-        # For generate/delete: gwt <action> <repo> <ticket_number> <description> [upstream_branch]
-        if [[ $# -lt 4 ]]; then
+        # For generate: gwt <action> <repo> <ticket_number> <description> [upstream_branch]
+        # For delete: gwt <action> <repo> <ticket_number> [description]
+        if [[ "$1" == "g" && $# -lt 4 ]]; then
             echo "Usage: gwt <action> <repo> <ticket_number> <description> [upstream_branch]"
             echo "action: g (generate) or d (delete)"
             echo "repo: a (auto) or s (sfaos)"
             echo "ticket_number: SFAP ticket number (5 or 6 digits)"
-            echo "description: ticket description for branch name"
+            echo "description: ticket description for branch name (required for generate, optional for delete)"
             echo "upstream_branch: optional, defaults to master"
             echo ""
             echo "Examples:"
             echo "  gwt g s 12345 coupled-crash-issue master"
             echo "  gwt g s 123456 other-issue 12.8-branch"
-            echo "  gwt d s 12345 coupled-crash-issue"
+            echo "  gwt d s 12345 coupled-crash-issue  (traditional usage)"
+            echo "  gwt d s 12345                      (auto-find worktree by SFAP number)"
             echo ""
             echo "For rename: gwt r <repo> <old_worktree_name> <new_worktree_name>"
+            return 1
+        elif [[ "$1" == "d" && $# -lt 3 ]]; then
+            echo "Usage: gwt d <repo> <ticket_number> [description]"
+            echo "For delete, description is optional - will auto-find worktree by SFAP number"
             return 1
         fi
 
@@ -474,27 +484,51 @@ function gwt() {
     # Validate action
     case "$action" in
         g|d|r) ;;
-        *) echo "Invalid action. Use 'g' for generate, 'd' for delete, or 'r' for rename"; return 1 ;;
+        *) echo "Invalid action. Use 'g' for generate, 'd' for delete, or 'r' for rename"; cd "$original_dir"; return 1 ;;
     esac
 
     # Set base repository
     case "$repo" in
         a) base_repo="auto" ;;
         s) base_repo="sfaos" ;;
-        *) echo "Invalid repo. Use 'a' for auto or 's' for sfaos"; return 1 ;;
+        *) echo "Invalid repo. Use 'a' for auto or 's' for sfaos"; cd "$original_dir"; return 1 ;;
     esac
 
     # Set worktree name
     if [[ "$action" == "r" ]]; then
         worktree_name="$old_worktree_name"  # For rename, we start with the old name
+    elif [[ "$action" == "d" && -z "$description" ]]; then
+        # For delete with just SFAP number, find the matching worktree
+        local pattern="${base_repo}-SFAP-${ticket_number}-"
+        local found_worktrees=($(find "/home/$USER/projects" -maxdepth 1 -type d -name "${pattern}*" | sed "s|/home/$USER/projects/||"))
+
+        if [[ ${#found_worktrees[@]} -eq 0 ]]; then
+            echo "Error: No worktree found matching SFAP-${ticket_number} for ${base_repo}"
+            cd "$original_dir"
+            return 1
+        elif [[ ${#found_worktrees[@]} -gt 1 ]]; then
+            echo "Error: Multiple worktrees found matching SFAP-${ticket_number} for ${base_repo}:"
+            printf '  %s\n' "${found_worktrees[@]}"
+            echo "Please specify the description to disambiguate."
+            cd "$original_dir"
+            return 1
+        fi
+
+        worktree_name="${found_worktrees[0]}"
+        echo "Found worktree: ${worktree_name}"
     else
         worktree_name="${base_repo}-SFAP-${ticket_number}-${description}"
     fi
 
-    # Switch to base repository
-    sp "$base_repo"
+    # Switch to base repository directory (without opening VS Code)
+    cd "/home/$USER/projects/$base_repo" 2>/dev/null
+    if [ $? -ne 0 ]; then
+        echo "Error: Could not change to base repository directory: /home/$USER/projects/$base_repo"
+        cd "$original_dir"
+        return 1
+    fi
     clear
-    echo -e "Swapping to ${base_repo} for a safe place to work."
+    echo -e "Working in ${base_repo} repository for worktree operations."
 
     case "$action" in
         g) # Generate worktree
@@ -557,8 +591,8 @@ function gwt() {
     }
 }
 EOF
-            echo -e "\nSetting your project to: ${worktree_name}"
-            sp "${worktree_name}"
+            echo -e "\nSwitching to new worktree: ${worktree_name}"
+            cd "/home/$USER/projects/${worktree_name}"
 
             # Open VS Code with the workspace
             code -n "${worktree_name}.code-workspace"
@@ -581,10 +615,10 @@ EOF
                 fi
             fi
 
-            # Return to projects directory
-            cd ~/projects
             echo -e "\nWorktree setup complete. VS Code workspace opened in new window."
             echo -e "\nYour current list of worktrees:"
+            # Switch back to base repo to show worktree list
+            cd "/home/$USER/projects/$base_repo"
             git worktree list
             ;;
 
@@ -614,7 +648,7 @@ EOF
                 fi
             fi
 
-            cd .. && ll
+            echo -e "\nDelete operation completed."
             ;;
 
         r) # Rename worktree
@@ -624,12 +658,14 @@ EOF
             # Validate that the old worktree exists
             if [[ ! -d "/home/$USER/projects/${old_worktree_name}" ]]; then
                 echo "Error: Worktree '${old_worktree_name}' does not exist"
+                cd "$original_dir"
                 return 1
             fi
 
             # Validate that the new worktree name doesn't already exist
             if [[ -d "/home/$USER/projects/${new_worktree_name}" ]]; then
                 echo "Error: Worktree '${new_worktree_name}' already exists"
+                cd "$original_dir"
                 return 1
             fi
 
@@ -665,6 +701,10 @@ EOF
 
     echo -e "\nYour new list of worktrees:"
     git worktree list
+
+    # Return to original directory
+    cd "$original_dir"
+    echo -e "\nReturned to original directory: $(pwd)"
 }
 
 

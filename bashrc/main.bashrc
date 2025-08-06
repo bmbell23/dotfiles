@@ -32,4 +32,3 @@ for config_file in ".bash_functions" ".bash_aliases" ".bash_variables"; do
     fi
 done
 
-# direnv was removed to avoid conflicts with custom project setup

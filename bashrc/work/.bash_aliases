@@ -178,6 +178,12 @@ alias gr='git review'
 # Send 'git review -R'
 alias gR='git review -R'
 
+# Show the size of all files and directories, sorted by size.
+alias size='du -sh .[^.]* * 2>/dev/null | sort -hr'
+
+# Show the percentage of disk used in /home/logs, /home/cilogs, and /home/group
+alias sod='df -h /home/logs /home/cilogs /home/group'
+
 # Effectively abandon all of your changes, and do a fresh pull.
 alias ga='git checkout -- .;gp'
 
