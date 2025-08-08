@@ -52,7 +52,7 @@ alias ctime="cat /etc/timezone;ls -alh /etc/localtime"
 alias lv="perl ~/work/general/tools/scripts/lv.pl"
 
 # Create a PEM Kit
-alias cpk="cd ~/projects/sfaos; gp; sudo platform/make_flash -D -K PEM local . debug"
+alias cpk="sudo platform/make_flash -D -K PEM local . debug"
 
 
 alias dock="ssh core@10.36.28.254 -i /home/auto/docker/flatcar/id_rsa"
@@ -182,7 +182,7 @@ alias gR='git review -R'
 alias size='du -sh .[^.]* * 2>/dev/null | sort -hr'
 
 # Show the percentage of disk used in /home/logs, /home/cilogs, and /home/group
-alias sod='df -h /home/logs /home/cilogs /home/group'
+alias sod='df -h /home/logs /home/cilogs /home/group /home/toybox'
 
 # Effectively abandon all of your changes, and do a fresh pull.
 alias ga='git checkout -- .;gp'
