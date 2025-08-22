@@ -52,11 +52,9 @@ alias ctime="cat /etc/timezone;ls -alh /etc/localtime"
 alias lv="perl ~/work/general/tools/scripts/lv.pl"
 
 # Create a PEM Kit
-alias cpk="cd ~/projects/sfaos; gp; sudo platform/make_flash -D -K PEM local . debug"
-
+alias cpk="sudo platform/make_flash -D -K PEM local . debug"
 
 alias dock="ssh core@10.36.28.254 -i /home/auto/docker/flatcar/id_rsa"
-
 
 alias kits="cd ~/sandbox/kits/pem_kits/;tree"
 
