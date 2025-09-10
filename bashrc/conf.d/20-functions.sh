@@ -211,7 +211,7 @@ EOF
 # Project switching completion without subdirectory support
 _sp_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
-    local projects_dir="$HOME/work/projects"
+    local projects_dir="$HOME/projects"
 
     # Get only top-level directories, excluding hidden ones
     COMPREPLY=($(compgen -W "$(find "$projects_dir" -mindepth 1 -maxdepth 1 -type d -not -path '*/\.*' | sed "s|$projects_dir/||")" -- "$cur"))
