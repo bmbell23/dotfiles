@@ -42,6 +42,9 @@ alias gitrr='git restore --staged *;git restore *;git rebase --continue'
 # change dir to pem kits
 alias cdpk='cd ~/sandbox/kits/pem_kits/'
 
+# WIP Monitor  
+alias wip="~/projects/auto/tools/workflow/wip_monitor.py"
+
 # Set time
 alias stime='ctime;sudo timedatectl set-timezone UTC;sudo su -c "echo UTC > /etc/timezone";cat /etc/timezone;ls -alh /etc/localtime'
 
