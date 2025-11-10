@@ -448,6 +448,6 @@ EOF
     # Launch workspace in VS Code
     code -n "$workspace_file"
 
-    # Return to original directory
-    cd "$original_dir"
+    # Don't return to original directory - stay in the selected project
+    # cd "$original_dir"  # Remove this line
 }
