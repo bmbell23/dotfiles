@@ -1,14 +1,8 @@
 # Format: <schedule> <command> # <description>
 
-# Reading Tracker Reports
-0 10 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_chain_report.sh # Daily chain report
-15 10 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_owned_report.sh # Daily owned books report
-30 10 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_report.sh # Daily reading progress report
-45 10 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_goals_report.sh # Daily goals report
-
-# Reading Tracker Database
-0 2 * * * /home/brandon/projects/reading_tracker/scripts/automation/daily_db_backup.sh # Daily database backup
-
 # System Maintenance
 0 3 * * 0 /home/brandon/projects/dotfiles/scripts/maintenance/weekly_cleanup.sh # Weekly system cleanup
 0 4 * * * /home/brandon/projects/dotfiles/scripts/maintenance/daily_backup.sh # Daily backup
+
+# Git Repository Sync
+0 * * * * /home/bbell/projects/dotfiles/scripts/git/hourly_repo_sync.sh # Hourly sync of auto and sfaos repos
