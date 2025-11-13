@@ -1048,6 +1048,12 @@ function select_project() {
 }
 
 function code() {
+    # Check if code command exists
+    if ! command -v code &>/dev/null; then
+        # Silently skip if code is not available (normal terminal)
+        return 0
+    fi
+
     # Try to connect to VS Code server
     command code "$@" 2>/dev/null || {
         local exit_code=$?
@@ -1076,6 +1082,9 @@ function code() {
                 echo "Error: Failed to start VS Code. Please check if VS Code is installed correctly."
                 return 1
             }
+        elif [[ $exit_code -eq 127 ]]; then
+            # Command not found - silently skip (normal terminal)
+            return 0
         else
             echo "Error: Failed to open VS Code (exit code: $exit_code)"
             return $exit_code

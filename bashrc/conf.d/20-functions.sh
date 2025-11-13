@@ -151,22 +151,23 @@ sp() {
         show_kanban
     fi
 
-    # Look for and launch workspace file, create if missing
-    local workspace_file="${1}.code-workspace"
-    if [ ! -f "$workspace_file" ]; then
-        # Determine theme based on project type only for new workspace files
-        local theme_name
-        if [ "$1" = "dotfiles" ]; then
-            theme_name="Pretty Pastel"
-        elif [[ "$1" == *"auto"* ]]; then
-            theme_name="mikasa rainbow"
-        elif [[ "$1" == *"sfaos"* ]]; then
-            theme_name="Monokai"
-        else
-            theme_name="Default Dark+"  # fallback theme
-        fi
+    # Look for and launch workspace file, create if missing (only if VS Code is available)
+    if command -v code &>/dev/null; then
+        local workspace_file="${1}.code-workspace"
+        if [ ! -f "$workspace_file" ]; then
+            # Determine theme based on project type only for new workspace files
+            local theme_name
+            if [ "$1" = "dotfiles" ]; then
+                theme_name="Pretty Pastel"
+            elif [[ "$1" == *"auto"* ]]; then
+                theme_name="mikasa rainbow"
+            elif [[ "$1" == *"sfaos"* ]]; then
+                theme_name="Monokai"
+            else
+                theme_name="Default Dark+"  # fallback theme
+            fi
 
-        cat > "${workspace_file}" << EOF
+            cat > "${workspace_file}" << EOF
 {
     "folders": [
         {
@@ -201,11 +202,12 @@ sp() {
     }
 }
 EOF
-        echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
-    fi
+            echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
+        fi
 
-    # Launch workspace in VS Code
-    code -n "$workspace_file"
+        # Launch workspace in VS Code
+        code -n "$workspace_file"
+    fi
 }
 
 # Project switching completion without subdirectory support
@@ -397,10 +399,11 @@ function pp() {
         theme_name="Default Dark+"  # fallback theme
     fi
 
-    # Look for and launch workspace file, create if missing
-    local workspace_file="${project_name}.code-workspace"
-    if [ ! -f "$workspace_file" ]; then
-        cat > "${workspace_file}" << EOF
+    # Look for and launch workspace file, create if missing (only if VS Code is available)
+    if command -v code &>/dev/null; then
+        local workspace_file="${project_name}.code-workspace"
+        if [ ! -f "$workspace_file" ]; then
+            cat > "${workspace_file}" << EOF
 {
     "folders": [
         {
@@ -435,18 +438,19 @@ function pp() {
     }
 }
 EOF
-        echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
-    else
-        # Update existing workspace file's theme
-        sed -i "s/\"workbench.colorTheme\": \".*\"/\"workbench.colorTheme\": \"${theme_name}\"/" "$workspace_file"
-        if ! grep -q "workbench.colorTheme" "$workspace_file"; then
-            # If theme setting doesn't exist, add it to settings object
-            sed -i "/\"settings\": {/a \        \"workbench.colorTheme\": \"${theme_name}\"," "$workspace_file"
+            echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
+        else
+            # Update existing workspace file's theme
+            sed -i "s/\"workbench.colorTheme\": \".*\"/\"workbench.colorTheme\": \"${theme_name}\"/" "$workspace_file"
+            if ! grep -q "workbench.colorTheme" "$workspace_file"; then
+                # If theme setting doesn't exist, add it to settings object
+                sed -i "/\"settings\": {/a \        \"workbench.colorTheme\": \"${theme_name}\"," "$workspace_file"
+            fi
         fi
-    fi
 
-    # Launch workspace in VS Code
-    code -n "$workspace_file"
+        # Launch workspace in VS Code
+        code -n "$workspace_file"
+    fi
 
     # Don't return to original directory - stay in the selected project
     # cd "$original_dir"  # Remove this line
