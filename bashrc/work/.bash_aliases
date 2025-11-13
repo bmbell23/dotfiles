@@ -73,6 +73,7 @@ alias bt="batch_tests -L -F -r"
 
 alias vbt="vim /home/bbell/batch_tests/default_batch"
 
+alias wip="/home/bbell/projects/auto-SFAP-102655-wip_monitor_updates/tools/workflow/wip_monitor_cron.sh"
 
 alias batch_tests="perl /home/$USER/work/projects/sfaos/janus/test/scripts/lib/util/batch_tests.pl"
 

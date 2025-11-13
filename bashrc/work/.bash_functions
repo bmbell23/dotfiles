@@ -448,8 +448,42 @@ function gwt() {
     else
         # For generate: gwt <action> <repo> <ticket_number> <description> [upstream_branch]
         # For delete: gwt <action> <repo> <ticket_number> [description]
-        if [[ "$1" == "g" && $# -lt 4 ]]; then
+        #          OR gwt <action> <repo> <full_worktree_name>
+
+        local action="$1"
+        local repo="$2"
+        local third_arg="$3"
+
+        # Check if third argument is a full worktree name (contains hyphens beyond just SFAP-)
+        # e.g., "sfaos-SFAP-123456-test" or "auto-SFAP-123456-description"
+        if [[ "$third_arg" =~ ^(sfaos|auto)-SFAP-[0-9]{5,6}-.+ ]]; then
+            # Full worktree name provided - extract components
+            if [[ "$third_arg" =~ ^(sfaos|auto)-SFAP-([0-9]{5,6})-(.+)$ ]]; then
+                local extracted_repo="${BASH_REMATCH[1]}"
+                local ticket_number="${BASH_REMATCH[2]}"
+                local description="${BASH_REMATCH[3]}"
+
+                # Override repo if it was extracted from worktree name
+                case "$extracted_repo" in
+                    auto) repo="a" ;;
+                    sfaos) repo="s" ;;
+                esac
+
+                local upstream_branch="${4:-master}"
+            else
+                echo "Error: Could not parse worktree name: $third_arg"
+                return 1
+            fi
+        else
+            # Traditional argument format
+            local ticket_number="$third_arg"
+            local description="$4"
+            local upstream_branch="${5:-master}"
+        fi
+
+        if [[ "$action" == "g" && -z "$description" ]]; then
             echo "Usage: gwt <action> <repo> <ticket_number> <description> [upstream_branch]"
+            echo "    OR gwt <action> <repo> <full_worktree_name> [upstream_branch]"
             echo "action: g (generate) or d (delete)"
             echo "repo: a (auto) or s (sfaos)"
             echo "ticket_number: SFAP ticket number (5 or 6 digits)"
@@ -461,21 +495,16 @@ function gwt() {
             echo "  gwt g s 123456 other-issue 12.8-branch"
             echo "  gwt d s 12345 coupled-crash-issue  (traditional usage)"
             echo "  gwt d s 12345                      (auto-find worktree by SFAP number)"
+            echo "  gwt d s sfaos-SFAP-123456-test     (full worktree name)"
             echo ""
             echo "For rename: gwt r <repo> <old_worktree_name> <new_worktree_name>"
             return 1
-        elif [[ "$1" == "d" && $# -lt 3 ]]; then
+        elif [[ "$action" == "d" && -z "$ticket_number" ]]; then
             echo "Usage: gwt d <repo> <ticket_number> [description]"
+            echo "    OR gwt d <repo> <full_worktree_name>"
             echo "For delete, description is optional - will auto-find worktree by SFAP number"
             return 1
         fi
-
-        # Parse arguments for generate/delete
-        local action="$1"
-        local repo="$2"
-        local ticket_number="$3"
-        local description="$4"
-        local upstream_branch="${5:-master}"
     fi
 
     local base_repo
@@ -644,13 +673,13 @@ EOF
 
             # Remove workspace storage directory if it exists
             if [ -d "$storage_path" ]; then
-                find "$storage_path" -type d -name "*${worktree_name}*" -exec rm -rf {} +
+                find "$storage_path" -type d -name "*${worktree_name}*" -exec rm -rf {} + 2>/dev/null || true
             fi
 
             # Remove from VSCode state DB if sqlite3 is available
             if command -v sqlite3 >/dev/null 2>&1; then
                 if [ -f "$vscode_state" ]; then
-                    sqlite3 "$vscode_state" "DELETE FROM ItemTable WHERE value LIKE '%${worktree_name}%';"
+                    sqlite3 "$vscode_state" "DELETE FROM ItemTable WHERE value LIKE '%${worktree_name}%';" 2>/dev/null || true
                 fi
             fi
 
