@@ -115,23 +115,49 @@ alias bm='cd /home/department_folders/FTP/COLORADO/eng/Buildmeister/Internal'
 # Git add, commit, and amend with conditional linting and testing
 function gaca() {
     local current_dir=$(basename "$PWD")
+    local git_root=$(git rev-parse --show-toplevel 2>/dev/null)
+    local repo_name=$(basename "$git_root" 2>/dev/null)
 
-    # Check if we're in the monty directory
-    if [[ "$current_dir" == "monty" ]]; then
+    # Slap the user if they're committing directly to base repos
+    if [[ "$repo_name" == "auto" || "$repo_name" == "sfaos" ]]; then
+        echo "╔════════════════════════════════════════════════════════════════╗"
+        echo "║  🚨 WHAT THE FUCK ARE YOU DOING?! 🚨                          ║"
+        echo "║                                                                ║"
+        echo "║  You're trying to commit directly to the base repo!            ║"
+        echo "║  Did you forget how to use worktrees, you absolute muppet?!    ║"
+        echo "║                                                                ║"
+        echo "║  USE A GODDAMN WORKTREE LIKE A PROFESSIONAL!                   ║"
+        echo "║                                                                ║"
+        echo "║  Try: gwt g a <ticket> <description>                           ║"
+        echo "║   or: gwt g s <ticket> <description>                           ║"
+        echo "║                                                                ║"
+        echo "║  Now get your shit together and do it right!                   ║"
+        echo "╚════════════════════════════════════════════════════════════════╝"
+        return 1
+    fi
+
+    # Check if we're in a sfaos worktree (must have sfaos-SFAP- pattern)
+    if [[ "$repo_name" == sfaos-SFAP-* ]]; then
+        local monty_dir="${git_root}/janus/test/monty"
+        if [[ ! -d "$monty_dir" ]]; then
+            echo "Error: Could not find monty directory at ${monty_dir}"
+            return 1
+        fi
+
         echo "Running lint in monty directory..."
-        if ! ./linter.sh; then
+        if ! (cd "$monty_dir" && ./linter.sh); then
             echo "Lint failed! Aborting commit."
             return 1
         fi
         echo "Running unit tests in monty directory..."
-        if ! ./run_unit_tests.sh; then
+        if ! (cd "$monty_dir" && ./run_unit_tests.sh); then
             echo "Unit tests failed! Aborting commit."
             return 1
         fi
-    # Check if we're in auto directory (or directory containing "auto")
-    elif [[ "$current_dir" == "auto" || "$current_dir" == *"auto"* ]]; then
+    # Check if we're in an auto worktree (must have auto-SFAP- pattern)
+    elif [[ "$repo_name" == auto-SFAP-* ]]; then
         echo "Running unit tests in auto directory..."
-        if ! jenkins/tests/run_unit_tests.sh; then
+        if ! (cd "$git_root" && jenkins/tests/run_unit_tests.sh); then
             echo "Unit tests failed! Aborting commit."
             return 1
         fi
@@ -148,23 +174,49 @@ alias sfaos='sp sfaos'
 # Git add and commit with conditional linting and testing
 function gac() {
     local current_dir=$(basename "$PWD")
+    local git_root=$(git rev-parse --show-toplevel 2>/dev/null)
+    local repo_name=$(basename "$git_root" 2>/dev/null)
 
-    # Check if we're in the monty directory
-    if [[ "$current_dir" == "monty" ]]; then
+    # Slap the user if they're committing directly to base repos
+    if [[ "$repo_name" == "auto" || "$repo_name" == "sfaos" ]]; then
+        echo "╔════════════════════════════════════════════════════════════════╗"
+        echo "║  🚨 WHAT THE FUCK ARE YOU DOING?! 🚨                          ║"
+        echo "║                                                                ║"
+        echo "║  You're trying to commit directly to the base repo!            ║"
+        echo "║  Did you forget how to use worktrees, you absolute muppet?!    ║"
+        echo "║                                                                ║"
+        echo "║  USE A GODDAMN WORKTREE LIKE A PROFESSIONAL!                   ║"
+        echo "║                                                                ║"
+        echo "║  Try: gwt g a <ticket> <description>                           ║"
+        echo "║   or: gwt g s <ticket> <description>                           ║"
+        echo "║                                                                ║"
+        echo "║  Now get your shit together and do it right!                   ║"
+        echo "╚════════════════════════════════════════════════════════════════╝"
+        return 1
+    fi
+
+    # Check if we're in a sfaos worktree (must have sfaos-SFAP- pattern)
+    if [[ "$repo_name" == sfaos-SFAP-* ]]; then
+        local monty_dir="${git_root}/janus/test/monty"
+        if [[ ! -d "$monty_dir" ]]; then
+            echo "Error: Could not find monty directory at ${monty_dir}"
+            return 1
+        fi
+
         echo "Running lint in monty directory..."
-        if ! ./linter.sh; then
+        if ! (cd "$monty_dir" && ./linter.sh); then
             echo "Lint failed! Aborting commit."
             return 1
         fi
         echo "Running unit tests in monty directory..."
-        if ! ./run_unit_tests.sh; then
+        if ! (cd "$monty_dir" && ./run_unit_tests.sh); then
             echo "Unit tests failed! Aborting commit."
             return 1
         fi
-    # Check if we're in auto directory (or directory containing "auto")
-    elif [[ "$current_dir" == "auto" || "$current_dir" == *"auto"* ]]; then
+    # Check if we're in an auto worktree (must have auto-SFAP- pattern)
+    elif [[ "$repo_name" == auto-SFAP-* ]]; then
         echo "Running unit tests in auto directory..."
-        if ! jenkins/tests/run_unit_tests.sh; then
+        if ! (cd "$git_root" && jenkins/tests/run_unit_tests.sh); then
             echo "Unit tests failed! Aborting commit."
             return 1
         fi
