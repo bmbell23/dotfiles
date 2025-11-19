@@ -1,0 +1,107 @@
+{
+    // Enable auto save after a delay
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 1000,
+
+    // Turn off minimap
+    "editor.minimap.enabled": false,
+
+    // Hides tabs in the editor
+    "workbench.editor.showTabs": "single",
+
+    // Set the default terminal to bash
+    "terminal.integrated.defaultProfile.linux": "bash",
+
+    // Set terminal font size and family
+    "terminal.integrated.fontSize": 12,
+
+    // Cascadia Mono font
+    "terminal.integrated.fontFamily": "Cascadia Mono",
+
+    // Disable SSH login terminal popup
+    "remote.SSH.showLoginTerminal": false,
+
+    // Sort files by type in explorer
+    "explorer.sortOrder": "type",
+
+    // Trim trailing whitespace
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+
+    // Inline suggestions (Turn on or off as desired)
+    "editor.inlineSuggest.enabled": true,
+
+    // Show breadcrumbs for navigation
+    "breadcrumbs.enabled": true,
+
+    // Compact folders in explorer (a/b/c instead of nested)
+    // set to false if you prefer seeing each folder
+    "explorer.compactFolders": false,
+
+    // Better search
+    "search.smartCase": true,
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/build": true,
+        "**/.git": true
+    },
+
+    // Quick suggestions
+    "editor.quickSuggestions": {
+        "other": true,
+        "comments": false,
+        "strings": true
+    },
+
+    // Suggest on trigger characters
+    "editor.suggestOnTriggerCharacters": true,
+
+    // Accept suggestion on commit character
+    "editor.acceptSuggestionOnCommitCharacter": true,
+
+    // Font ligatures (if your font supports it, like Cascadia Code)
+    "editor.fontLigatures": true,
+    "editor.fontFamily": "'Cascadia Code', 'Cascadia Mono', Consolas, 'Courier New', monospace",
+
+    // Word wrap
+    "editor.wordWrap": "on",
+
+    // Render whitespace
+    "editor.renderWhitespace": "selection",
+
+    // Better terminal
+    "terminal.integrated.cursorBlinking": true,
+    "terminal.integrated.cursorStyle": "line",
+    "terminal.integrated.copyOnSelection": true,
+
+    // Git lens in editor
+    "editor.codeLens": true,
+
+    // Show whitespace changes in diff editor
+    "diffEditor.ignoreTrimWhitespace": false,
+
+    // Sticky scroll - keeps function/class names visible at top
+    "editor.stickyScroll.enabled": true,
+
+    // Bracket pair colorization (built-in)
+    "editor.bracketPairColorization.enabled": true,
+    "editor.guides.bracketPairs": "active",
+
+    // Smooth scrolling
+    "editor.smoothScrolling": true,
+    "workbench.list.smoothScrolling": true,
+    "terminal.integrated.smoothScrolling": true,
+
+    // Better cursor
+    "editor.cursorBlinking": "smooth",
+    "editor.cursorSmoothCaretAnimation": "on",
+
+    // My Ubuntu DockerHost server
+    "remote.SSH.remotePlatform": {
+        "100.123.154.40": "linux"
+    },
+
+    // Confirm before moving files in explorer
+    "explorer.confirmDragAndDrop": false
+}
