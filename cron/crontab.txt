@@ -3,6 +3,7 @@
 # System Maintenance
 0 3 * * 0 /home/brandon/projects/dotfiles/scripts/maintenance/weekly_cleanup.sh # Weekly system cleanup
 0 4 * * * /home/brandon/projects/dotfiles/scripts/maintenance/daily_backup.sh # Daily backup
+0 2 * * * /home/brandon/projects/dotfiles/scripts/backup-script.sh # Daily ProxMox backups (dockerhost-docker + documents)
 
 # Git Repository Sync
 0 * * * * /home/bbell/projects/dotfiles/scripts/git/hourly_repo_sync.sh # Hourly sync of auto and sfaos repos
