@@ -37,10 +37,10 @@ function ipk()
         echo "Using latest version directory: $kit_dir"
 
         # Find the PEM kit in the latest version directory
-        pem_kit=$(find "$kit_dir" -name "ddn-flash-PEM-*-dev-Debug.nojanus.tar.zst" -type f | head -1)
+        pem_kit=$(find "$kit_dir" -name "ddn-flash-PEM-*-dev-debug.nojanus.tar.zst" -type f | head -1)
 
         if [ -z "$pem_kit" ]; then
-            echo "Error: No PEM kit found matching pattern 'ddn-flash-PEM-*-dev-Debug.nojanus.tar.zst' in $kit_dir"
+            echo "Error: No PEM kit found matching pattern 'ddn-flash-PEM-*-dev-debug.nojanus.tar.zst' in $kit_dir"
             return 1
         fi
 
@@ -565,7 +565,7 @@ function gwt() {
             git branch "${worktree_name}"
             git worktree add "/home/$USER/projects/${worktree_name}" "${worktree_name}"
             git branch --set-upstream-to="origin/${upstream_branch}" "${worktree_name}"
-            
+
             # Pull latest changes from upstream branch
             echo -e "\nPulling latest changes from origin/${upstream_branch}..."
             cd "/home/$USER/projects/${worktree_name}"
