@@ -430,6 +430,28 @@ function greset()
 #   gwt d s 12345                      (new: auto-find worktree by SFAP number)
 #   gwt r <repo> <old_worktree_name> <new_worktree_name>
 function gwt() {
+    # Auto-detect projects directory by looking for sfaos or auto repositories
+    local projects_dir=""
+    local search_paths=(
+        "/home/$USER/work/projects"
+        "/home/$USER/projects"
+        "/home/$USER"
+    )
+
+    for path in "${search_paths[@]}"; do
+        if [[ -d "$path/sfaos" ]] || [[ -d "$path/auto" ]]; then
+            projects_dir="$path"
+            break
+        fi
+    done
+
+    if [[ -z "$projects_dir" ]]; then
+        echo "Error: Could not find sfaos or auto repository in standard locations:"
+        printf '  %s\n' "${search_paths[@]}"
+        echo "Please ensure your repositories are in one of these locations."
+        return 1
+    fi
+
     # Show help if no arguments or help flag
     if [[ $# -eq 0 || "$1" == "--help" || "$1" == "-h" ]]; then
         cat << 'EOF'
@@ -478,6 +500,7 @@ EXAMPLES:
     gwt r s sfaos-SFAP-12345-old-name sfaos-SFAP-12345-new-name
 
 NOTES:
+    - Auto-detects projects directory
     - For sfaos worktrees, automatically creates lib symlink and Python venv
     - Creates VS Code workspace file with repository-specific theme
     - Symlinks logs from /home/logs/SFAP-<ticket> if they exist
@@ -586,7 +609,7 @@ EOF
     elif [[ "$action" == "d" && -z "$description" ]]; then
         # For delete with just SFAP number, find the matching worktree
         local pattern="${base_repo}-SFAP-${ticket_number}-"
-        local found_worktrees=($(find "/home/$USER/projects" -maxdepth 1 -type d -name "${pattern}*" | sed "s|/home/$USER/projects/||"))
+        local found_worktrees=($(find "$projects_dir" -maxdepth 1 -type d -name "${pattern}*" | sed "s|$projects_dir/||"))
 
         if [[ ${#found_worktrees[@]} -eq 0 ]]; then
             echo "Error: No worktree found matching SFAP-${ticket_number} for ${base_repo}"
@@ -607,9 +630,9 @@ EOF
     fi
 
     # Switch to base repository directory (without opening VS Code)
-    cd "/home/$USER/projects/$base_repo" 2>/dev/null
+    cd "$projects_dir/$base_repo" 2>/dev/null
     if [ $? -ne 0 ]; then
-        echo "Error: Could not change to base repository directory: /home/$USER/projects/$base_repo"
+        echo "Error: Could not change to base repository directory: $projects_dir/$base_repo"
         cd "$original_dir"
         return 1
     fi
@@ -621,15 +644,15 @@ EOF
             echo -e "\nCreating worktree: ${worktree_name}"
             # Create worktree directly from the remote branch in one atomic operation
             # This ensures the local branch starts from the correct upstream branch
-            git worktree add -b "${worktree_name}" "/home/$USER/projects/${worktree_name}" "origin/${upstream_branch}"
+            git worktree add -b "${worktree_name}" "$projects_dir/${worktree_name}" "origin/${upstream_branch}"
 
             # Symlink logs if they exist
             local logs_source="/home/logs/SFAP-${ticket_number}"
             if [[ -d "${logs_source}" ]]; then
                 echo -e "\nFound logs for SFAP-${ticket_number}, creating symlink..."
                 echo "Source: ${logs_source}"
-                ln -s "${logs_source}" "/home/$USER/projects/${worktree_name}/logs"
-                git -C "/home/$USER/projects/${worktree_name}" status --porcelain >/dev/null 2>&1
+                ln -s "${logs_source}" "$projects_dir/${worktree_name}/logs"
+                git -C "$projects_dir/${worktree_name}" status --porcelain >/dev/null 2>&1
             fi
 
             # Set theme based on repo type
@@ -641,7 +664,7 @@ EOF
             fi
 
             # Create VS Code workspace file with repository-specific theme
-            local workspace_file="/home/$USER/projects/${worktree_name}/${worktree_name}.code-workspace"
+            local workspace_file="$projects_dir/${worktree_name}/${worktree_name}.code-workspace"
             cat > "${workspace_file}" << EOF
 {
     "folders": [
@@ -678,20 +701,20 @@ EOF
 }
 EOF
             echo -e "\nSwitching to new worktree: ${worktree_name}"
-            cd "/home/$USER/projects/${worktree_name}"
+            cd "$projects_dir/${worktree_name}"
 
             # Open VS Code with the workspace
             code -n "${worktree_name}.code-workspace"
 
             # If this is an SFAOS tree, setup lib symlink and virtual environment
             if [[ "$repo" == "s" ]]; then
-                local scripts_dir="/home/$USER/projects/${worktree_name}/janus/test/scripts"
-                local monty_dir="/home/$USER/projects/${worktree_name}/janus/test/monty"
+                local scripts_dir="$projects_dir/${worktree_name}/janus/test/scripts"
+                local monty_dir="$projects_dir/${worktree_name}/janus/test/monty"
 
                 if [[ -d "$scripts_dir" ]]; then
                     echo -e "\nCreating lib symlink for SFAOS..."
                     cd "$scripts_dir"
-                    ln -s /home/$USER/projects/auto/lib
+                    ln -s $projects_dir/auto/lib
                 fi
 
                 if [[ -d "$monty_dir" ]]; then
@@ -704,7 +727,7 @@ EOF
             echo -e "\nWorktree setup complete. VS Code workspace opened in new window."
             echo -e "\nYour current list of worktrees:"
             # Switch back to base repo to show worktree list
-            cd "/home/$USER/projects/$base_repo"
+            cd "$projects_dir/$base_repo"
             git worktree list
             ;;
 
@@ -712,7 +735,7 @@ EOF
             echo -e "\nYour current list of worktrees:"
             git worktree list
             echo -e "\nRemoving worktree: ${worktree_name}"
-            rm -rf "/home/$USER/projects/${worktree_name}"
+            rm -rf "$projects_dir/${worktree_name}"
             echo -e "\nPruning your worktrees."
             git worktree prune
             echo -e "\nRemoving branch: ${worktree_name}"
@@ -742,14 +765,14 @@ EOF
             git worktree list
 
             # Validate that the old worktree exists
-            if [[ ! -d "/home/$USER/projects/${old_worktree_name}" ]]; then
+            if [[ ! -d "$projects_dir/${old_worktree_name}" ]]; then
                 echo "Error: Worktree '${old_worktree_name}' does not exist"
                 cd "$original_dir"
                 return 1
             fi
 
             # Validate that the new worktree name doesn't already exist
-            if [[ -d "/home/$USER/projects/${new_worktree_name}" ]]; then
+            if [[ -d "$projects_dir/${new_worktree_name}" ]]; then
                 echo "Error: Worktree '${new_worktree_name}' already exists"
                 cd "$original_dir"
                 return 1
@@ -758,18 +781,18 @@ EOF
             echo -e "\nRenaming worktree from '${old_worktree_name}' to '${new_worktree_name}'"
 
             # Step 1: Rename the directory
-            mv "/home/$USER/projects/${old_worktree_name}" "/home/$USER/projects/${new_worktree_name}"
+            mv "$projects_dir/${old_worktree_name}" "$projects_dir/${new_worktree_name}"
 
             # Step 2: Update git worktree path
             git worktree remove "${old_worktree_name}" 2>/dev/null || true
-            git worktree add "/home/$USER/projects/${new_worktree_name}" "${old_worktree_name}"
+            git worktree add "$projects_dir/${new_worktree_name}" "${old_worktree_name}"
 
             # Step 3: Rename the branch
             git branch -m "${old_worktree_name}" "${new_worktree_name}"
 
             # Step 4: Update the workspace file name and content
-            local old_workspace_file="/home/$USER/projects/${new_worktree_name}/${old_worktree_name}.code-workspace"
-            local new_workspace_file="/home/$USER/projects/${new_worktree_name}/${new_worktree_name}.code-workspace"
+            local old_workspace_file="$projects_dir/${new_worktree_name}/${old_worktree_name}.code-workspace"
+            local new_workspace_file="$projects_dir/${new_worktree_name}/${new_worktree_name}.code-workspace"
 
             if [[ -f "$old_workspace_file" ]]; then
                 # Update the workspace name in the file content
