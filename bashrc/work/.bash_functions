@@ -430,6 +430,63 @@ function greset()
 #   gwt d s 12345                      (new: auto-find worktree by SFAP number)
 #   gwt r <repo> <old_worktree_name> <new_worktree_name>
 function gwt() {
+    # Show help if no arguments or help flag
+    if [[ $# -eq 0 || "$1" == "--help" || "$1" == "-h" ]]; then
+        cat << 'EOF'
+gwt - Git Worktree Manager
+
+USAGE:
+    gwt <action> <repo> <ticket_number> <description> [upstream_branch]
+    gwt <action> <repo> <full_worktree_name> [upstream_branch]
+    gwt r <repo> <old_worktree_name> <new_worktree_name>
+
+ACTIONS:
+    g           Generate (create) a new worktree
+    d           Delete an existing worktree
+    r           Rename an existing worktree
+
+REPOSITORIES:
+    a           auto repository
+    s           sfaos repository
+
+ARGUMENTS:
+    ticket_number       SFAP ticket number (5 or 6 digits)
+    description         Brief description for branch name (use hyphens, no spaces)
+    upstream_branch     Remote branch to track (default: master)
+    full_worktree_name  Complete worktree name (e.g., sfaos-SFAP-123456-description)
+
+EXAMPLES:
+    # Create new worktree from master
+    gwt g s 12345 coupled-crash-issue
+
+    # Create new worktree from a different remote branch
+    gwt g s 102078 read-copy-to-ap SFAP-102078-read-copy-to-ap
+
+    # Create worktree tracking a release branch
+    gwt g s 123456 other-issue 12.8-branch
+
+    # Delete worktree (auto-find by SFAP number)
+    gwt d s 12345
+
+    # Delete worktree (with description)
+    gwt d s 12345 coupled-crash-issue
+
+    # Delete worktree (using full name)
+    gwt d s sfaos-SFAP-123456-test
+
+    # Rename worktree
+    gwt r s sfaos-SFAP-12345-old-name sfaos-SFAP-12345-new-name
+
+NOTES:
+    - For sfaos worktrees, automatically creates lib symlink and Python venv
+    - Creates VS Code workspace file with repository-specific theme
+    - Symlinks logs from /home/logs/SFAP-<ticket> if they exist
+    - When creating from a remote branch, the worktree starts from that branch's HEAD
+
+EOF
+        return 0
+    fi
+
     # Save original directory to return to at the end
     local original_dir="$(pwd)"
 
