@@ -562,15 +562,9 @@ function gwt() {
     case "$action" in
         g) # Generate worktree
             echo -e "\nCreating worktree: ${worktree_name}"
-            git branch "${worktree_name}"
-            git worktree add "/home/$USER/projects/${worktree_name}" "${worktree_name}"
-            git branch --set-upstream-to="origin/${upstream_branch}" "${worktree_name}"
-
-            # Pull latest changes from upstream branch
-            echo -e "\nPulling latest changes from origin/${upstream_branch}..."
-            cd "/home/$USER/projects/${worktree_name}"
-            git pull
-            cd "/home/$USER/projects/$base_repo"
+            # Create worktree directly from the remote branch in one atomic operation
+            # This ensures the local branch starts from the correct upstream branch
+            git worktree add -b "${worktree_name}" "/home/$USER/projects/${worktree_name}" "origin/${upstream_branch}"
 
             # Symlink logs if they exist
             local logs_source="/home/logs/SFAP-${ticket_number}"
