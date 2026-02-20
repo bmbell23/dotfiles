@@ -1,6 +1,9 @@
 # Display tree view of scripts directory
 alias ts="tree scripts"
 
+# Check Debian version
+alias deb="cat /etc/*release | grep DEBIAN_VERSION_FULL"
+
 # Check reading tracker version
 alias rtver="py /home/bbell/sandbox/projects/personal/reading_tracker/reading_list/scripts/updates/update_version.py --check"
 
