@@ -1,9 +1,9 @@
 # Format: <schedule> <command> # <description>
 
-# System Maintenance
-0 3 * * 0 /home/brandon/projects/dotfiles/scripts/maintenance/weekly_cleanup.sh # Weekly system cleanup
-0 4 * * * /home/brandon/projects/dotfiles/scripts/maintenance/daily_backup.sh # Daily backup
-0 2 * * * /home/brandon/projects/dotfiles/scripts/backup-script.sh # Daily ProxMox backups (dockerhost-docker + documents)
+# Hourly backup to internal 1TB SSD (/mnt/backups)
+# Backs up: docker-backups, documents, audiobooks, books, games, audiobookshelf, music, other
+0 * * * * /home/brandon/projects/dotfiles/scripts/backup-script.sh # Hourly internal backup
 
-# Git Repository Sync
-0 * * * * /home/bbell/projects/dotfiles/scripts/git/hourly_repo_sync.sh # Hourly sync of auto and sfaos repos
+# Hourly backup to external 2TB HDD (/mnt/external) - only runs if drive is connected
+# Backs up: pictures, videos
+5 * * * * /home/brandon/projects/dotfiles/scripts/backup-external.sh # Hourly external media backup
