@@ -9,18 +9,22 @@ set -euo pipefail
 # Cron can run with a minimal PATH, so set a predictable one.
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
+# Set variables
 BACKUP_ROOT="/mnt/external"
 LOG_DIR="${BACKUP_LOG_DIR:-${HOME:-/tmp}/.local/state/backups}"
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 LOGFILE=""
 
+# Create log directory
 if ! mkdir -p "$LOG_DIR" 2>/dev/null; then
     LOG_DIR="/tmp/backups-${USER:-$(id -u)}"
     mkdir -p "$LOG_DIR"
 fi
 
+# Create log file
 LOGFILE="$LOG_DIR/backup-external-$TIMESTAMP.log"
 
+# Acquire lock if flock is available to prevent concurrent runs of this script
 if command -v flock >/dev/null 2>&1; then
     LOCK_FILE="/tmp/$(basename "$0").lock"
     exec 9>"$LOCK_FILE"
@@ -30,10 +34,12 @@ if command -v flock >/dev/null 2>&1; then
     fi
 fi
 
+# Log function
 log() {
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)] $1" | tee -a "$LOGFILE"
 }
 
+# Rsync function
 run_rsync() {
     local source="$1"
     local dest="$2"
@@ -66,21 +72,26 @@ log "========================================="
 log "External Drive Backup started"
 log "========================================="
 
+# Check if dry run is enabled
 if [ "${BACKUP_DRY_RUN:-0}" = "1" ]; then
     log "DRY RUN enabled (no files will be changed)"
 fi
 
+# Check if external drive is mounted
 if ! mountpoint -q "$BACKUP_ROOT"; then
     log "WARNING: External drive not mounted at $BACKUP_ROOT"
     log "Skipping external backup (this is normal if drive is unplugged)"
     exit 0
 fi
 
+# Create backup directories
 mkdir -p "$BACKUP_ROOT/media/pictures"
 mkdir -p "$BACKUP_ROOT/media/videos"
 
+# Run backups
 BACKUP_RESULTS=()
 
+# Backup pictures
 log ""
 log "--- Backup 1/2: /mnt/boston/media/pictures ---"
 if run_rsync \
