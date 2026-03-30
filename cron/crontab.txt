@@ -7,3 +7,6 @@
 # Hourly backup to external 2TB HDD (/mnt/external) - only runs if drive is connected
 # Backs up: pictures, videos
 5 * * * * /home/brandon/projects/dotfiles/scripts/backup-external.sh # Hourly external media backup
+
+# Daily Proxmox config backup (configs, network, fstab, udev, scripts)
+0 2 * * * /home/brandon/projects/dotfiles/scripts/proxmox-config-backup.sh # Daily Proxmox config backup
