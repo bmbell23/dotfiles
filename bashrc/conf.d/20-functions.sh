@@ -94,9 +94,25 @@ gvc() {
 
     # Commit changes
     git add .
-    git commit -m "v$version: $message"
-    git tag -a "v$version" -m "Version $version"
-    git push && git push --tags
+    if ! git commit -m "v$version: $message"; then
+        echo "Error: Commit failed"
+        return 1
+    fi
+
+    if ! git tag -a "v$version" -m "Version $version"; then
+        echo "Error: Failed to create tag v$version"
+        return 1
+    fi
+
+    if ! git push origin HEAD; then
+        echo "Error: Failed to push branch"
+        return 1
+    fi
+
+    if ! git push origin "v$version"; then
+        echo "Error: Failed to push tag v$version"
+        return 1
+    fi
 }
 
 # Set project root
