@@ -32,3 +32,9 @@ for config_file in ".bash_functions" ".bash_aliases" ".bash_variables"; do
     fi
 done
 
+# Source auto project bash files only if they exist
+if [ -d "${HOME}/projects/auto/.bashrc" ]; then
+    for f in "${HOME}/projects/auto/.bashrc/"*.sh; do
+        [ -f "$f" ] && source "$f"
+    done
+fi
