@@ -3,6 +3,7 @@ build-essential
 certbot
 curl
 # Development tools
+ffmpeg
 fzfcertbox python3-certbot-nginx
 git
 git gui
