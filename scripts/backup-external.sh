@@ -14,6 +14,8 @@ BACKUP_ROOT="/mnt/external"
 LOG_DIR="${BACKUP_LOG_DIR:-${HOME:-/tmp}/.local/state/backups}"
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 LOGFILE=""
+ENABLE_HEALTH_CHECK="${BACKUP_HEALTH_CHECK:-1}"
+EXCLUDED_PICTURES_SUBPATH="${BACKUP_PICTURES_EXCLUDE_SUBPATH:-thumbs/defc20ec-b70a-49b2-9938-70a4831be653/b4/4c/}"
 
 # Create log directory
 if ! mkdir -p "$LOG_DIR" 2>/dev/null; then
@@ -39,11 +41,37 @@ log() {
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)] $1" | tee -a "$LOGFILE"
 }
 
+# Preflight check that confirms the mounted destination accepts basic writes.
+preflight_health_check() {
+    local probe_dir="$BACKUP_ROOT/.backup-healthcheck"
+    local probe_file="$probe_dir/probe-$$"
+
+    if ! mkdir -p "$probe_dir" 2>/dev/null; then
+        log "FAILED: Cannot create health-check directory: $probe_dir"
+        return 1
+    fi
+
+    if ! : > "$probe_file" 2>/dev/null; then
+        log "FAILED: Destination is not writable (health-check write failed): $BACKUP_ROOT"
+        return 1
+    fi
+
+    if ! rm -f "$probe_file" 2>/dev/null; then
+        log "FAILED: Destination cleanup failed during health-check: $probe_file"
+        return 1
+    fi
+
+    log "Preflight health-check passed for destination: $BACKUP_ROOT"
+    return 0
+}
+
 # Rsync function
 run_rsync() {
     local source="$1"
     local dest="$2"
     local description="$3"
+    shift 3
+    local extra_rsync_opts=("$@")
 
     log "Starting backup: $description"
     log "  Source: $source"
@@ -57,6 +85,10 @@ run_rsync() {
     local rsync_opts=(-avh --delete --stats)
     if [ "${BACKUP_DRY_RUN:-0}" = "1" ]; then
         rsync_opts+=(--dry-run)
+    fi
+    if [ "${#extra_rsync_opts[@]}" -gt 0 ]; then
+        rsync_opts+=("${extra_rsync_opts[@]}")
+        log "  Extra rsync options: ${extra_rsync_opts[*]}"
     fi
 
     if rsync "${rsync_opts[@]}" "$source" "$dest" >> "$LOGFILE" 2>&1; then
@@ -84,9 +116,31 @@ if ! mountpoint -q "$BACKUP_ROOT"; then
     exit 0
 fi
 
+if [ "$ENABLE_HEALTH_CHECK" = "1" ]; then
+    log ""
+    log "Running preflight health-check..."
+    if ! preflight_health_check; then
+        log "FAILED: Aborting before rsync due to health-check failure"
+        exit 1
+    fi
+fi
+
 # Create backup directories
 mkdir -p "$BACKUP_ROOT/media/pictures"
 mkdir -p "$BACKUP_ROOT/media/videos"
+
+log ""
+log "Backup scope includes only:"
+log "  - /mnt/boston/media/pictures"
+log "  - /mnt/boston/media/videos"
+log "Not included by this script: /mnt/boston/media/quarantine"
+log "Quarantine is never scanned/read by this backup job"
+
+PICTURES_EXTRA_OPTS=()
+if [ -n "$EXCLUDED_PICTURES_SUBPATH" ]; then
+    PICTURES_EXTRA_OPTS=(--exclude="$EXCLUDED_PICTURES_SUBPATH")
+    log "Excluded pictures subpath: /mnt/boston/media/pictures/$EXCLUDED_PICTURES_SUBPATH"
+fi
 
 # Run backups
 BACKUP_RESULTS=()
@@ -97,7 +151,8 @@ log "--- Backup 1/2: /mnt/boston/media/pictures ---"
 if run_rsync \
     "/mnt/boston/media/pictures/" \
     "$BACKUP_ROOT/media/pictures/" \
-    "/mnt/boston/media/pictures"; then
+    "/mnt/boston/media/pictures" \
+    "${PICTURES_EXTRA_OPTS[@]}"; then
     BACKUP_RESULTS+=("/mnt/boston/media/pictures: SUCCESS")
 else
     BACKUP_RESULTS+=("/mnt/boston/media/pictures: FAILED")
