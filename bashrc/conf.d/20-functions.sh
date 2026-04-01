@@ -363,7 +363,7 @@ function pp() {
         elif [[ "${projects[$i]}" == sfaos* ]]; then
             project_color="${ORANGE}"  # SFAOS projects in orange
         fi
-        
+
         echo -en "${CYAN}${VERTICAL}${RESET} "
         printf "%2d${RESET}) ${project_color}%-${max_length}s${RESET}" $num "${projects[$i]}"
         printf "%${SIDE_PADDING}s" ""
@@ -388,7 +388,7 @@ function pp() {
     # Switch to selected project
     local index=$((selection - 1))
     local project_name="${projects[$index]}"
-    
+
     # Color the project name in the confirmation message based on type
     local confirm_color="${GRAY}"
     if [[ "${project_name}" == auto* ]]; then
@@ -396,7 +396,7 @@ function pp() {
     elif [[ "${project_name}" == sfaos* ]]; then
         confirm_color="${ORANGE}"
     fi
-    
+
     echo -e "\n${WHITE}Switching to project: ${confirm_color}${BOLD}${project_name}${RESET}"
 
     # Save current directory before switching
@@ -470,4 +470,26 @@ EOF
 
     # Don't return to original directory - stay in the selected project
     # cd "$original_dir"  # Remove this line
+}
+
+# Docker exec into a container
+function de() {
+    if [ -z "$1" ]; then
+        echo "Usage: de <container_name_or_id>"
+        return 1
+    fi
+
+    local container="$1"
+    docker exec -it "$container" /bin/bash
+}
+
+# Docker compose a service
+function dc() {
+    if [ -z "$1" ]; then
+        echo "Usage: dcs <service_name>"
+        return 1
+    fi
+
+    local service="$1"
+    docker-compose up -d --build "$service"
 }
