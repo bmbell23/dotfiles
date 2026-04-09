@@ -12,3 +12,10 @@ fi
 if [[ "$-" =~ 'i' ]]; then
     umask 022
 fi
+
+# Vault token — stored in a machine-local file, not tracked in dotfiles
+# To set up: install -m 600 /dev/null ~/.vault_token_secret
+#             echo 'export VAULT_TOKEN=<your-token>' > ~/.vault_token_secret
+if [ -f "$HOME/.vault_token_secret" ]; then
+    source "$HOME/.vault_token_secret"
+fi
