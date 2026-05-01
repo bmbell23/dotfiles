@@ -10,6 +10,12 @@ alias rtver="py /home/bbell/sandbox/projects/personal/reading_tracker/reading_li
 # Setup Stephen King website parser project
 alias ps_skp="cd ~/sandbox/projects/personal/stephen_king_website_parser && ./setup.sh && source activate_venv.sh"
 
+# grip help
+alias ghv="grip --help --verbose"
+
+# ssh to kit signing server
+alias sign="ssh svc-ksm-jenkins@co-sf-ksm-01"
+
 # Shortcut for python3
 alias py="python3"
 

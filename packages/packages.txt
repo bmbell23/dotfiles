@@ -13,6 +13,7 @@ jq
 ncdu
 net-tools
 nmap
+npm
 princexml
 python3-certbot-nginx
 python3-full
