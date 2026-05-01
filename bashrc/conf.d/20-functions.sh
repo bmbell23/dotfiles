@@ -491,5 +491,5 @@ function dc() {
     fi
 
     local service="$1"
-    docker-compose up -d --build "$service"
+    docker compose up -d --build "$service"
 }
