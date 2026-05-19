@@ -121,9 +121,6 @@ alias ant='perl /home/bbell/work/projects/analyzer/lib/Analyzer/analyzer.pl'
 # Navigate to sfaos janus directory
 alias gojanus='cd /home/bbell/work/projects/sfaos/janus'
 
-# Navigate to sfaos janus and run analyzer
-alias aa='sp sfaos;cd janus;analyzer'
-
 # Run unit tests script
 alias mut='./run_unit_tests.sh'
 
