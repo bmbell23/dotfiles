@@ -19,3 +19,10 @@ fi
 if [ -f "$HOME/.vault_token_secret" ]; then
     source "$HOME/.vault_token_secret"
 fi
+
+# Source sibling work-specific files (variables, aliases, functions)
+_work_dir="$(dirname "${BASH_SOURCE[0]}")"
+for f in "$_work_dir/.bash_variables" "$_work_dir/.bash_aliases" "$_work_dir/.bash_functions"; do
+    [ -r "$f" ] && source "$f"
+done
+unset _work_dir f

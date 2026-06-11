@@ -1,0 +1,382 @@
+
+# File search and analysis functions
+function tigb()
+{
+    # Tig blame on a file
+    if [[ -z "$1" ]]; then
+        echo "Provide filename"
+        return 1
+    fi
+    tig blame `find . -type f -name $1`
+}
+
+function tigl()
+{
+    # Tig log on a file
+    if [[ -z "$1" ]]; then
+        echo "Provide filename"
+        return 1
+    fi
+    tig log `find . -type f -name $1`
+}
+
+function ff()
+{
+    # Find a file by name
+    if [[ -z "$1" ]]; then
+        echo "Provide filename"
+        return 1
+    fi
+    find . -name $1
+}
+
+function fastgrep()
+{
+    # Search for string excluding executable files
+    if [[ -z "$1" ]]; then
+        echo "Provide searchstring"
+        return 1
+    fi
+    find . -type f ! -perm /111 -exec grep --exclude="*.obj" --exclude="*.lib" --exclude="*.zst" "$1" {} +
+}
+
+function pl()
+{
+    # Run pylint on a file
+    if [[ -z "$1" ]]; then
+        echo "Provide filename"
+        return 1
+    fi
+    if [ ! -d test/monty ]; then
+        echo "test/monty does not exist, are you in a valid git project?"
+        return 1
+    fi
+    cd test/monty
+    py3 -m pylint --rcfile .pylintrc `find . -type f -name $1`
+    cd -
+}
+
+# Build functions - Emulated
+function mo()
+{
+    # Make optimized build
+    gojanus;
+    clear;
+    make JANUS_DEBUG=NO JANUS_OPTIMIZE=YES;
+}
+
+function md()
+{
+    # Make debug build
+    gojanus;
+    clear;
+    make JANUS_DEBUG=YES;
+}
+
+function mod()
+{
+    # Make optimized debug build
+    gojanus;
+    clear;
+    make JANUS_DEBUG=YES JANUS_OPTIMIZE=YES;
+}
+
+function mco()
+{
+    # Make clean optimized build
+    gojanus;
+    make cleanall;
+    clear;
+    make JANUS_DEBUG=NO JANUS_OPTIMIZE=YES;
+}
+
+function mcd()
+{
+    # Make clean debug build
+    gojanus;
+    make cleanall;
+    clear;
+    make JANUS_DEBUG=YES;
+}
+
+function mcod()
+{
+    # Make clean optimized debug build
+    gojanus;
+    make cleanall;
+    clear;
+    make JANUS_DEBUG=YES JANUS_OPTIMIZE=YES;
+}
+
+
+
+# Git utility functions
+function getbranches()
+{
+    # Show branches that contain the given SHA
+    sha=$1
+    if [[ -z "${sha}" ]]; then
+        echo "Provide a SHA to look up"
+        return 1
+    fi
+    git branch -r --list 'origin/*' --contains $1
+}
+
+function what()
+{
+    # Display system and version information
+    echo "Hostname:       $(hostname) ($(hostname -i))";
+    echo "Debian Version: $(cat /etc/debian_version)";
+    echo "Date:           $(date)";
+}
+
+function when()
+{
+    # Display date and NTP information
+    echo "Date:       $(date)";
+    echo "NTP:        $(ntpq -p)";
+}
+
+###############################################################################
+# COMPLETION FUNCTIONS
+###############################################################################
+
+# Version and profiling functions
+function ver()
+{
+    # Get build information from unified
+    executable=$1
+    if [[ -z "${executable}" ]]; then
+        executable="unified"
+    fi
+    git archive --remote="ssh://${USER}@cos-scm-00.colorado.datadirectnet.com:29418/sfa/sfaos" HEAD janus/show_version.sh | tar -xO > /tmp/show_version.sh
+    chmod +x /tmp/show_version.sh
+    /tmp/show_version.sh ${executable}
+    rm /tmp/show_version.sh
+}
+
+function profile()
+{
+    # Profile an executable using valgrind
+    target="$@"
+    outdir=/home/$USER/work/general/profiling/callgrind/
+    cg_file=$outdir/callgrind.out
+    an_file=$outdir/annotated.txt
+    mkdir -p $outdir
+
+    echo "Profiling \"$target\" using valgrind. This takes a long time."
+    valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes --callgrind-out-file=$cg_file $target 2>/dev/null
+    callgrind_annotate --auto=yes $cg_file 2>/dev/null > $an_file
+    echo "Profiling complete. Output in \"$outdir\""
+    kcachegrind ${cg_file}
+}
+
+function mct()
+{
+    # Make clean and test
+    gojanus;
+    make cleantest;
+    clear;
+    make test;
+}
+
+function mctu()
+{
+    # Make clean and test with performance and SAM tests
+    gojanus;
+    make cleantest;
+    clear;
+    make test ONLY=test_perf OPT=1 EXTRA_CFLAGS="-DUT_SAM_ALL"
+    make test ONLY=test_sam EXTRA_CFLAGS="-DUT_SAM_ALL"
+}
+
+function mctd()
+{
+    # Make clean and test specific test with debug flags
+    optornot=$2
+    gojanus;
+    make cleantest;
+    clear;
+    make test ONLY=$1 EXTRA_CFLAGS=-Wno-unused-variable $optornot;
+}
+
+function mtd()
+{
+    # Make test specific test with debug flags
+    optornot=$2
+    gojanus;
+    clear;
+    make test ONLY=$1 EXTRA_CFLAGS=-Wno-unused-variable $optornot;
+}
+
+function mcg()
+{
+    # Make clean and build GDB tools
+    current_project=$PROJECT;
+    gojanus;
+    cd src/common/tools/gdb;
+    make clean;
+    make p_state_info;
+    make p_sam_info;
+    sp $current_project
+}
+
+function repeat()
+{
+    # Repeat a command until it fails
+    command=$@;
+    exit=0
+    count=0
+    while [ $exit = 0 ]
+    do
+        $@
+        exit=$?
+        count=$((count+1))
+        echo "Total executions: $count"
+    done
+    echo "Ran the command $@ a total of $count times"
+}
+
+function hudson_cleanup()
+{
+    # Clean up Hudson temporary files
+    perl -e 'my $dir = "/tmp"; opendir( DIR, $dir ); my @files = readdir(DIR); closedir(DIR); my $num = scalar(@files); my $count = 0; foreach my $f ( @files ) { if ( $f =~ m/^hudson[0-9]/ ) { print "Removing $count / $num\n"; `sudo rm -rf $f`; } $count++; }'
+}
+
+function scanlog()
+{
+    # Search for patterns in log files
+    to_find="$@"
+    find_str="*/10.32.31.*/*/jt.log"
+    grep "$to_find" "$find_str"
+}
+
+function remacs()
+{
+    # Open file in emacs read-only mode
+    emacs "$1" --eval '(setq buffer-read-only t)'
+}
+
+function run_script()
+{
+    # Find and run a script with unified
+    script=$1;
+    shift
+    gojanus
+    SCRIPT_LOC=`find -type f -name $script | head -n 1`
+
+    echo "Script found at $SCRIPT_LOC";
+    echo "Running script $script...";
+
+    perl $SCRIPT_LOC -start_unified $@
+}
+
+# System utility functions
+function alertme()
+{
+    # Sound alert
+    sh -c "echo -e '\a' > /dev/tty"
+}
+
+# Git management functions
+function gbranch()
+{
+    # Create a new git branch and set upstream
+    name=$1
+    if [[ -z "$name" ]]; then
+        echo "Must provide a branch name"
+        return 1
+    fi
+
+    git branch $name
+    git checkout $name
+    git branch --set-upstream-to=origin $name
+    git branch
+}
+
+function gdebranch()
+{
+    # Create a git branch with specific upstream
+    name=$1
+    if [[ -z "$name" ]]; then
+        echo "Must provide a branch name"
+        return 1
+    fi
+
+    git branch $name
+    git checkout $name
+    git branch --set-upstream-to=remotes/origin/de37821 $name
+    git branch
+}
+
+# Unified environment functions
+function setdual()
+{
+    # Setup session to run dual controller for emu (instance 2)
+    export UNIFIED_ENV="-n2 -d1 -T ${USER}_disks -l1000000000"
+}
+
+function rus()
+{
+    # Run unified with smaller logdisk and dual rp
+    user_disks_dir="$USER""_disks";
+    export UNIFIED_ENV="-l100000000 -a2 -T ""$user_disks_dir";
+    gojanus;
+    rm -rf disks/*;
+    rm -rf /tmp/$USER/$user_disks_dir;
+    mkdir disks;
+    ./unified
+}
+
+function ru()
+{
+    # Run unified with standard configuration
+    user_disks_dir="$USER""_disks";
+    export UNIFIED_ENV="-l1000000000 -T ""$user_disks_dir";
+    gojanus;
+    rm -rf disks/*;
+    rm -rf /tmp/$USER/$user_disks_dir;
+    mkdir disks;
+    ./unified
+}
+
+function rul()
+{
+    # Run unified with smaller logdisk and specified state_sam logdisk size
+    user_disks_dir="$USER""_disks";
+    export UNIFIED_ENV="-l100000000 -o1000000 -T ""$user_disks_dir";
+    gojanus;
+    rm -rf disks/*;
+    rm -rf /tmp/$USER/$user_disks_dir;
+    mkdir disks;
+    ./unified
+}
+
+function rud()
+{
+    # Launch unified with specific enclosure configuration
+    user_disks_dir="$USER""_disks";
+    if [ $# != 1 ]; then
+        return;
+    fi
+
+    if [ "$1" = "200nvx2" ]; then
+        export UNIFIED_ENV="-l100000000 -o1000000 -y$1 -z2 -T ""$user_disks_dir";
+    elif [ "$1" = "400nvx2" ]; then
+        export UNIFIED_ENV="-l100000000 -o1000000 -y$1 -a2 -z1 -T ""$user_disks_dir";
+    else
+        export UNIFIED_ENV="-l100000000 -o1000000 -y$1 -T ""$user_disks_dir";
+    fi
+    gojanus;
+    ./unified
+}
+
+function print_results()
+{
+    # Print build results with timestamps
+    echo RESULTS
+    echo $1 START TIME
+    echo `date --rfc-3339=ns` END TIME
+    find ../ddn-flash* -maxdepth 1 -type f -exec stat -c '%y %n' {} \; | sort -nr | awk 'NR>=1 && NR<=2 {print}'
+    find unified -maxdepth 1 -type f -exec stat -c '%y %n' {} \; | sort -nr | awk 'NR==1,NR==1 {print}'
+}

@@ -416,22 +416,7 @@ function greset()
 	git pull
 }
 
-# Function: Manage Git Worktrees
-# Usage: gwt <action> <repo> <ticket_number> [description] [upstream_branch]
-# action: g (generate) or d (delete)
-# repo: a (auto) or s (sfaos)
-# ticket_number: SFAP ticket number (5 or 6 digits)
-# description: ticket description for branch name (required for generate, optional for delete)
-# upstream_branch: optional, defaults to master
-# Examples:
-#   gwt g s 12345 coupled-crash-issue master
-#   gwt g s 123456 other-issue 12.8-branch
-#   gwt d s 12345 coupled-crash-issue  (traditional usage)
-#   gwt d s 12345                      (new: auto-find worktree by SFAP number)
-#   gwt r <repo> <old_worktree_name> <new_worktree_name>
-# Source the standalone gwt (Git Worktree Manager) function
-# This allows sharing the same function with colleagues
-source "${BASH_SOURCE%/*}/gwt.sh"
+
 
 
 
