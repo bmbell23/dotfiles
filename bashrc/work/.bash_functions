@@ -767,3 +767,27 @@ function code() {
         fi
     }
 }
+
+function newalias() {
+    if [[ $# -lt 2 ]]; then
+        echo "Usage: newalias <alias_name> <command>"
+        return 1
+    fi
+
+    local alias_name="$1"
+    shift
+    local alias_command="$*"
+
+    # Check if the alias already exists
+    if alias "$alias_name" &>/dev/null; then
+        echo "Alias '$alias_name' already exists. Please choose a different name."
+        return 1
+    fi
+
+    # Add the new alias to .bash_aliases
+    echo "alias $alias_name='$alias_command'" >> ~/projects/dotfiles/bashrc/work/.bash_aliases
+    echo "Alias '$alias_name' added successfully."
+
+    # Source the .bash_aliases file to make the new alias available immediately
+    source ~/.bashrc
+}

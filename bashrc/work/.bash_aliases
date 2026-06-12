@@ -302,3 +302,6 @@ alias home='clear;cd;ll'
 
 # Abort git rebase, reset to HEAD, and pull
 alias GRH='git rebase --abort;git reset --hard HEAD;gp'
+
+# Autotmatically added aliases from newalias() function:
+alias toybox='cd /home/toybox/'
