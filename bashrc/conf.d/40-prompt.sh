@@ -13,6 +13,11 @@ WHITE="\[\033[0;37m\]"
 BOLD_GREEN="\[\033[1;32m\]"
 BOLD_BLUE="\[\033[1;34m\]"
 
+# Bi pride flag colors (256-color)
+BI_BLUE="\[\033[38;5;33m\]"
+BI_PURPLE="\[\033[38;5;135m\]"
+BI_PINK="\[\033[38;5;205m\]"
+
 # Git branch function
 git_branch() {
     local branch=$(git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
@@ -21,8 +26,8 @@ git_branch() {
     fi
 }
 
-# Set the multi-line prompt without the branch
-PS1="${BOLD_GREEN}\u${RESET}@${BOLD_BLUE}\h${RESET}\n${CYAN}\w${RESET}\n"
+# Set the multi-line prompt: [timestamp] hostname \n directory
+PS1="${BI_BLUE}[\t]${RESET} ${BI_PURPLE}\h${RESET}\n${BI_PINK}\w${RESET}\n"
 
 # Directory colors
 if [ -x /usr/bin/dircolors ]; then
