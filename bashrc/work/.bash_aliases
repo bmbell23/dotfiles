@@ -7,6 +7,9 @@ alias deb="cat /etc/*release | grep DEBIAN_VERSION_FULL"
 # Check reading tracker version
 alias rtver="py /home/bbell/sandbox/projects/personal/reading_tracker/reading_list/scripts/updates/update_version.py --check"
 
+# Login to docker
+alias dlog="docker login registry.devops.colorado.datadirectnet.com -u bbell"
+
 # Setup Stephen King website parser project
 alias ps_skp="cd ~/sandbox/projects/personal/stephen_king_website_parser && ./setup.sh && source activate_venv.sh"
 
