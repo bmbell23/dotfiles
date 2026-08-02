@@ -1,1 +1,11 @@
 # Put variables here if you care to!
+export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com
+
+# OpenBao token. The `bao` CLI's token helper does NOT read ~/.bao-token on this
+# build -- verified: `bao token lookup` with no BAO_TOKEN sends the request
+# unauthenticated and the server answers 403 "permission denied", which looks
+# exactly like a policy problem and is not. So export it explicitly.
+#
+# Refresh with:  /path/to/login.sh bbell     (8h TTL)
+# The file holds only the token, never the password.
+[ -r "$HOME/.bao-token" ] && export BAO_TOKEN="$(cat "$HOME/.bao-token")"

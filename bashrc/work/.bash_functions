@@ -790,4 +790,9 @@ function newalias() {
 
     # Source the .bash_aliases file to make the new alias available immediately
     source ~/.bashrc
+
+    # Commit
+    cd ~/projects/dotfiles/
+    gvc 'new alias'
+    cd -
 }

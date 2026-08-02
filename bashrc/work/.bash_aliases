@@ -309,3 +309,5 @@ alias GRH='git rebase --abort;git reset --hard HEAD;gp'
 # Autotmatically added aliases from newalias() function:
 alias toybox='cd /home/toybox/'
 alias fixpem='grip node pem health-check --name'
+alias glol='git log --oneline'
+alias fart='echo('fart fart fart')'
