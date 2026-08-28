@@ -2,6 +2,12 @@
 ################################# FUNCTIONS #################################
 #############################################################################
 
+# Function: Health Check a PEM
+function phc()
+{
+    grip node pem health-check --name co-sf-pe-$1
+}
+
 # Function: Log in to OpenBao
 function baome()
 {
