@@ -2,6 +2,13 @@
 ################################# FUNCTIONS #################################
 #############################################################################
 
+# Function: Log in to OpenBao
+function bao()
+{
+    export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com && bao login -method=token token=$(jq -r --arg u "$USER" '.[$u + "_token"]' /home/$USER/.config/ddn/bao.json)
+}
+
+
 # Function: Create a PEM Kit ISO
 function cpi()
 {
