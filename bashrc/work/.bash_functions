@@ -4,10 +4,14 @@
 
 # Function: Health Check a PEM
 function phc()
+
 {
-    local IFS=,
-    grip node pem health-check --name "$*"
+    local list
+    list=$(printf '%s' "$*" | tr ',' ' ' | tr -s ' ' | sed 's/^ *//; s/ *$//' | tr ' ' ',')
+    [ -n "$list" ] || { echo "phc: no PEMs given" >&2; return 1; }
+    grip node pem health-check --name "$list"
 }
+
 
 # Function: Log in to OpenBao
 function baome()
