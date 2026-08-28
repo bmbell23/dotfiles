@@ -5,7 +5,8 @@
 # Function: Health Check a PEM
 function phc()
 {
-    grip node pem health-check --name co-sf-pe-$1
+    local IFS=,
+    grip node pem health-check --name "$*"
 }
 
 # Function: Log in to OpenBao
@@ -14,6 +15,10 @@ function baome()
     export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com && bao login -method=token token=$(jq -r --arg u "$USER" '.[$u + "_token"]' /home/$USER/.config/ddn/bao.json)
 }
 
+function baoroot()
+{
+    export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com && bao login -method=token token=$(jq -r --arg u root '.[$u + "_token"]' /home/$USER/.config/ddn/bao.json)
+}
 
 # Function: Create a PEM Kit ISO
 function cpi()
