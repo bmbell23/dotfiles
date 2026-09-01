@@ -3,9 +3,18 @@
 #############################################################################
 
 # Function: Health Check a PEM
+#   phc ci                     every PEM the CI system owns
+#   phc 152                    one PEM
+#   phc 152 156 157            several, space separated
+#   phc 152, 156, 157          ... or comma separated, with or without spaces
 function phc()
 
 {
+    if [ "$1" = "ci" ]; then
+        shift
+        grip node pem health-check --ci "$@"
+        return
+    fi
     local list
     list=$(printf '%s' "$*" | tr ',' ' ' | tr -s ' ' | sed 's/^ *//; s/ *$//' | tr ' ' ',')
     [ -n "$list" ] || { echo "phc: no PEMs given" >&2; return 1; }
