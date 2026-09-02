@@ -819,6 +819,10 @@ function newalias() {
     echo "alias $alias_name='$alias_command'" >> ~/projects/dotfiles/bashrc/work/.bash_aliases
     echo "Alias '$alias_name' added successfully."
 
+    # Commit the change
+    cd ~/projects/dotfiles/
+    gvc 'new alias: $1'
+
     # Source the .bash_aliases file to make the new alias available immediately
     source ~/.bashrc
 }
