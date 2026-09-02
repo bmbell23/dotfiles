@@ -822,6 +822,7 @@ function newalias() {
     # Commit the change
     cd ~/projects/dotfiles/
     gvc 'new alias: $1'
+    cd -
 
     # Source the .bash_aliases file to make the new alias available immediately
     source ~/.bashrc
