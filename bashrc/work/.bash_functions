@@ -22,6 +22,18 @@ function phc()
 }
 
 
+jenkins-token() {
+    local f="$HOME/.config/ddn/jenkins.env"
+    local v
+    v=$(sed -n 's/^[[:space:]]*new api key:[[:space:]]*//p' "$f" | tail -n1)
+    if [[ -z $v ]]; then
+        echo "jenkins-token: no 'new api key' line in $f" >&2
+        return 1
+    fi
+    export JENKINS_TOKEN="$v"
+    echo "JENKINS_TOKEN set (${#v} chars, …${v: -4})"
+}
+
 # Function: Log in to OpenBao
 function baome()
 {
