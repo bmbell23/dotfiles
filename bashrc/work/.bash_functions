@@ -22,7 +22,7 @@ function phc()
 }
 
 
-jenkins-token() {i
+jenkins-token() {
     unset JENKINS_TOKEN
     local f="$HOME/.config/ddn/jenkins.env"
     local v
