@@ -22,7 +22,8 @@ function phc()
 }
 
 
-jenkins-token() {
+jenkins-token() {i
+    unset JENKINS_TOKEN
     local f="$HOME/.config/ddn/jenkins.env"
     local v
     v=$(sed -n 's/^[[:space:]]*new api key:[[:space:]]*//p' "$f" | tail -n1)

@@ -1,7 +1,7 @@
 # Put variables here if you care to!
 export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com
 
-export JENKINS_TOKEN=116810051722206c157f6599b2b51d64c4
+#export JENKINS_TOKEN=113c0600d5b26e580f99a922a2ca475cf8
 
 # OpenBao token. The `bao` CLI's token helper does NOT read ~/.bao-token on this
 # build -- verified: `bao token lookup` with no BAO_TOKEN sends the request
