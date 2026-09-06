@@ -496,15 +496,16 @@ function dc() {
 
 # List (ll) a directory, or cat a file. Tab-completes both.
 lc() {
-    if [ -z "$1" ]; then
-        ls -alhF
-    elif [ -d "$1" ]; then
-        ls -alhF "$1"
-    elif [ -f "$1" ]; then
-        cat "$1"
-    else
-        echo "lc: no such file or directory: $1" >&2
+    local target="${1:-.}"
+    if [ ! -e "$target" ]; then
+        echo "lc: no such file or directory: $target" >&2
         return 1
+    fi
+    echo "$(realpath "$target")"
+    if [ -d "$target" ]; then
+        ls -alhF "$target"
+    else
+        cat "$target"
     fi
 }
 complete -o default -o bashdefault lc
