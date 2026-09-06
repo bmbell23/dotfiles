@@ -36,10 +36,10 @@ jenkins-token() {
 }
 
 # Function: Log in to OpenBao
-function baome()
-{
-    export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com && bao login -method=token token=$(jq -r --arg u "$USER" '.[$u + "_token"]' /home/$USER/.config/ddn/bao.json)
-}
+#function baome()
+#{
+#    export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com && bao login -method=token token=$(jq -r --arg u "$USER" '.[$u + "_token"]' /home/$USER/.config/ddn/bao.json)
+#}
 
 function baoroot()
 {
