@@ -11,3 +11,42 @@ export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com
 # Refresh with:  /path/to/login.sh bbell     (8h TTL)
 # The file holds only the token, never the password.
 [ -r "$HOME/.bao-token" ] && export BAO_TOKEN="$(cat "$HOME/.bao-token")"
+
+# --- Credentials from OpenBao (SFAP-108169) ---------------------------------
+# Tokens for the MCP servers and CLI tools, fetched at login from your own
+# OpenBao area instead of living in a file on disk. Nothing here is a secret,
+# so this is safe to keep in the dotfiles repo.
+#
+#   personal/<you>/jira        -> JIRA_API_TOKEN, JIRA_API_TOKEN_2, JIRA_EMAIL
+#   personal/<you>/confluence  -> CONFLUENCE_API_TOKEN
+#
+# Silent when you are not logged in: a login shell is the wrong place to
+# demand a browser, and exporting empty strings would turn a missing login
+# into confusing 401s from Jira hours later. Run `baoin`, then `baocreds` to
+# fill them in without opening a new shell.
+baocreds() {
+    command -v bao >/dev/null 2>&1 || return 1
+
+    # The identity, so the path follows whoever is logged in rather than
+    # $USER -- the Keycloak name and the local one need not match.
+    local me json
+    me=$(bao token lookup -format=json 2>/dev/null \
+         | sed -n 's/.*"display_name": *"oidc-\([^"]*\)".*/\1/p')
+    [ -z "$me" ] && { [ -n "$1" ] && echo "not logged in to OpenBao -- run 'baoin'" >&2; return 1; }
+
+    # One call per secret, not one per field.
+    json=$(bao kv get -format=json "secret/personal/$me/jira" 2>/dev/null)
+    if [ -n "$json" ]; then
+        export JIRA_API_TOKEN=$(sed -n 's/.*"api_token": *"\([^"]*\)".*/\1/p' <<<"$json" | head -1)
+        export JIRA_API_TOKEN_2=$(sed -n 's/.*"api_token_2": *"\([^"]*\)".*/\1/p' <<<"$json" | head -1)
+        export JIRA_EMAIL=$(sed -n 's/.*"email": *"\([^"]*\)".*/\1/p' <<<"$json" | head -1)
+    fi
+    json=$(bao kv get -format=json "secret/personal/$me/confluence" 2>/dev/null)
+    if [ -n "$json" ]; then
+        export CONFLUENCE_API_TOKEN=$(sed -n 's/.*"api_token": *"\([^"]*\)".*/\1/p' <<<"$json" | head -1)
+        export CONFLUENCE_EMAIL="${JIRA_EMAIL}"
+    fi
+    [ -n "$1" ] && echo "loaded: JIRA_API_TOKEN JIRA_EMAIL CONFLUENCE_API_TOKEN"
+    return 0
+}
+baocreds
