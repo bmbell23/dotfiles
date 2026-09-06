@@ -494,18 +494,27 @@ function dc() {
     docker compose up -d --build "$service"
 }
 
-# List (ll) a directory, or cat a file. Tab-completes both.
+# lc <dir>      -> ll the dir
+# lc <file>     -> print its full path
+# lc cat <file> -> print path, then cat it
+# lc vi  <file> -> print path, then open in vi
+# Tab-completes files and directories.
 lc() {
+    local action=""
+    if [ "$1" = "cat" ] || [ "$1" = "vi" ]; then
+        action="$1"
+        shift
+    fi
     local target="${1:-.}"
     if [ ! -e "$target" ]; then
         echo "lc: no such file or directory: $target" >&2
         return 1
     fi
-    echo "$(realpath "$target")"
-    if [ -d "$target" ]; then
+    realpath "$target"
+    if [ -n "$action" ]; then
+        "$action" "$target"
+    elif [ -d "$target" ]; then
         ls -alhF "$target"
-    else
-        cat "$target"
     fi
 }
 complete -o default -o bashdefault lc
