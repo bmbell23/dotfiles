@@ -18,7 +18,7 @@ alias ghv="grip --help --verbose"
 
 # ssh to kit signing server
 alias sign="baossh svc-ksm-jenkins@co-sf-ksm-01"
-alias cofs2="baossh root@co-fs2.colorado.datadirectnet.com"
+alias cofs2="baossh root@co-fs2"
 
 # Shortcut for python3
 alias py="python3"
