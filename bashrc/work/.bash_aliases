@@ -16,9 +16,13 @@ alias ps_skp="cd ~/sandbox/projects/personal/stephen_king_website_parser && ./se
 # grip help
 alias ghv="grip --help --verbose"
 
-# ssh to kit signing server
+# ssh to various servers via openbao credentials
 alias sign="baossh svc-ksm-jenkins@co-sf-ksm-01"
-alias cofs2="baossh root@co-fs2"
+alias co-fs2="baossh root@co-fs2"
+alias co-ci="baossh auto@co-ci"
+
+# shred a field
+alias srm="shred -u"
 
 # Shortcut for python3
 alias py="python3"
