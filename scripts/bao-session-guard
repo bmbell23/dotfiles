@@ -1,0 +1,88 @@
+#!/bin/bash
+#
+# bao-session-guard -- run by pam_exec when a session is opened for a user.
+#
+# The kernel stamps /proc/self/loginuid at login and it survives su and sudo,
+# so when someone becomes another user the process still names whoever logged
+# in. That is the signal this acts on, and it is available here BEFORE the
+# impersonator gets a shell -- unlike a check in the target's bashrc, which
+# they can skip by asking for a different shell.
+#
+# Two behaviours, both opt-in per user by a marker file in their home:
+#
+#   ~/.bao-guard          revoke that user's OpenBao session and log it
+#   ~/.bao-guard-deny     additionally refuse to open the session at all
+#
+# OPT-IN ON PURPOSE. This runs for every su and sudo on the host. Anything
+# unexpected exits 0 and gets out of the way; the only non-zero return is the
+# explicit deny case, for a user who asked for it.
+#
+# Installed by SFAP-108169. SFAP-108199 is why it is needed at all: every
+# domain user has passwordless root here, so any credential belonging to
+# anyone is reachable by everyone.
+
+set -u
+umask 077
+
+# Only at session open, and only when PAM tells us who the session is for.
+[ "${PAM_TYPE:-}" = "open_session" ] || exit 0
+target="${PAM_USER:-}"
+[ -n "$target" ] || exit 0
+
+# Never interfere with root's own sessions.
+[ "$target" = "root" ] && exit 0
+
+home=$(getent passwd "$target" 2>/dev/null | cut -d: -f6)
+[ -n "$home" ] && [ -d "$home" ] || exit 0
+[ -f "$home/.bao-guard" ] || [ -f "$home/.bao-guard-deny" ] || exit 0
+
+login_uid=$(cat /proc/self/loginuid 2>/dev/null || echo 4294967295)
+target_uid=$(id -u "$target" 2>/dev/null || echo "")
+[ -n "$target_uid" ] || exit 0
+
+# No login session behind this -- cron, a systemd unit, a container. Nothing
+# can be told, so allow. This is what keeps automation working.
+[ "$login_uid" = "4294967295" ] && exit 0
+
+# The user's own session, however many times they su to themselves.
+[ "$login_uid" = "$target_uid" ] && exit 0
+
+caller=$(getent passwd "$login_uid" 2>/dev/null | cut -d: -f1)
+caller="${caller:-uid $login_uid}"
+
+logger -t bao-session-guard \
+    "session for $target opened by $caller via ${PAM_SERVICE:-unknown}"
+
+# Revoke the target's OpenBao session if there is one. Delete the file ONLY
+# after a confirmed revoke: deleting a token that is still valid removes the
+# owner's ability to revoke it while leaving it usable to whoever read it.
+tokenfile="$home/.vault-token"
+if [ -r "$tokenfile" ]; then
+    bao_bin=""
+    for c in /usr/local/bin/bao /usr/bin/bao "$home/bin/bao"; do
+        [ -x "$c" ] && { bao_bin="$c"; break; }
+    done
+    if [ -n "$bao_bin" ]; then
+        if BAO_ADDR="${BAO_ADDR:-https://openbao.devops.colorado.datadirectnet.com}" \
+           BAO_TOKEN="$(cat "$tokenfile")" \
+           timeout 5 "$bao_bin" token revoke -self >/dev/null 2>&1; then
+            rm -f "$tokenfile"
+            logger -t bao-session-guard "revoked and cleared OpenBao session for $target"
+        else
+            logger -t bao-session-guard \
+                "COULD NOT revoke OpenBao session for $target -- token left in place"
+        fi
+    else
+        logger -t bao-session-guard "bao binary not found -- no revoke attempted for $target"
+    fi
+fi
+
+# Refuse the session only where the user explicitly asked for it.
+if [ -f "$home/.bao-guard-deny" ]; then
+    logger -t bao-session-guard "DENIED session for $target opened by $caller"
+    echo "Refused: $target does not permit sessions opened by another account." >&2
+    echo "Log in as $target directly." >&2
+    exit 1
+fi
+
+exit 0
