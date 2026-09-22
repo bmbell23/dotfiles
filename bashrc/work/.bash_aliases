@@ -319,4 +319,32 @@ alias vrc='vi ~/.bashrc'
 alias cbr='cargo build --release'
 alias update-jenkins='tools/jenkins-plugins lock && git diff gitops/jenkins/values.yaml && tools/jenkins-verify'
 alias shrc='for f in bashrc/*.sh; do source bashrc/worktree.sh; done'
-alias gpr='git push -u origin HEAD && gh pr create --base master --fill'
+# gpr [base]  -- push current branch and open a PR against base (default master).
+# Refuses if the branch already has an open PR: pushing in that case appends
+# your commits to that PR and `gh pr create` silently no-ops. Use `gprn` to
+# move the commits onto a fresh branch instead.
+gpr() {
+  local base="${1:-master}" br existing
+  br="$(git rev-parse --abbrev-ref HEAD)" || return 1
+  existing="$(gh pr list --head "$br" --state open --json number --jq '.[0].number')"
+  if [ -n "$existing" ]; then
+    echo "gpr: branch '$br' already has open PR #$existing." >&2
+    echo "     'git push' would add these commits to it. For a separate PR: gprn <new-branch> [base]" >&2
+    return 1
+  fi
+  git push -u origin HEAD && gh pr create --base "$base" --fill
+}
+
+# gprn <new-branch> [base]  -- move commits not yet in base onto a fresh branch
+# cut from origin/<base>, then push and open a PR for it. Leaves the current
+# branch untouched; rewind it yourself if those commits should not stay there.
+gprn() {
+  local b="${1:?usage: gprn <new-branch> [base]}" base="${2:-master}" src
+  src="$(git rev-parse --abbrev-ref HEAD)" || return 1
+  git fetch origin || return 1
+  git checkout -b "$b" "origin/$base" || return 1
+  git cherry-pick "origin/$base..$src" || {
+    echo "gprn: cherry-pick failed; resolve then rerun the push manually" >&2; return 1; }
+  git push -u origin "$b" && gh pr create --base "$base" --fill
+}
+alias dockerin='baoin && printf %s "$DOCKER_TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin'
