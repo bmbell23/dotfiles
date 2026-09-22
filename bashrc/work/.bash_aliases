@@ -347,4 +347,4 @@ gprn() {
     echo "gprn: cherry-pick failed; resolve then rerun the push manually" >&2; return 1; }
   git push -u origin "$b" && gh pr create --base "$base" --fill
 }
-alias dockerin='baoin && printf %s "$DOCKER_TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin'
+alias dockerin='baoin && baoenv docker && printf %s "$DOCKER_TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin'
