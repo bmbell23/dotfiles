@@ -41,9 +41,47 @@ jenkins-token() {
 #    export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com && bao login -method=token token=$(jq -r --arg u "$USER" '.[$u + "_token"]' /home/$USER/.config/ddn/bao.json)
 #}
 
+# Function: Find Claude Code session transcripts containing ALL the given
+# terms, listed newest first.
+#
+# Each term narrows what the previous one matched, so the terms are ANDed and
+# the order does not matter: `claudegrep harbor labgenie` finds the sessions
+# that mention both, not the ones mentioning either.
+#
+# Usage: claudegrep TERM [TERM...]
 function claudegrep()
 {
-    grep -l "$1" ~/.claude/projects/*/*.jsonl | xargs ls -lt
+    if [ $# -eq 0 ]; then
+        echo "usage: claudegrep TERM [TERM...]" >&2
+        return 2
+    fi
+
+    # Collected into an array rather than left as a glob: with no transcripts
+    # the pattern would stay literal and grep would complain about a file
+    # called '*.jsonl' instead of saying there is nothing to search.
+    local files=() f term
+    for f in ~/.claude/projects/*/*.jsonl; do
+        [ -e "$f" ] && files+=("$f")
+    done
+    if [ ${#files[@]} -eq 0 ]; then
+        echo "claudegrep: no transcripts under ~/.claude/projects" >&2
+        return 1
+    fi
+
+    for term in "$@"; do
+        mapfile -t files < <(grep -l -e "$term" -- "${files[@]}" 2>/dev/null)
+        # Stop at the term that eliminated everything, and say which one it
+        # was - otherwise a four-term search just returns nothing and you are
+        # left guessing which term was too narrow. It also keeps the next
+        # grep from being handed an empty file list, where it would read
+        # stdin and appear to hang.
+        if [ ${#files[@]} -eq 0 ]; then
+            echo "claudegrep: no transcript matches '$term'" >&2
+            return 1
+        fi
+    done
+
+    ls -lt -- "${files[@]}"
 }
 
 function baoroot()
