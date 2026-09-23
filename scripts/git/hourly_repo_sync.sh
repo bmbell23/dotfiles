@@ -56,10 +56,10 @@ mkdir -p "$(dirname "$LOG_FILE")"
 log_message "Starting hourly repository sync"
 
 # Sync auto repository
-sync_repo "/home/$USER/projects/auto"
+sync_repo "/home/$USER/projects/SFA/auto/auto"
 
 # Sync sfaos repository
-sync_repo "/home/$USER/projects/sfaos"
+sync_repo "/home/$USER/projects/SFA/sfaos/sfaos"
 
 log_message "Completed hourly repository sync"
 

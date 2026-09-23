@@ -1,6 +1,6 @@
 # Source sfaos bashrc
-if [ -f /home/$USER/projects/auto/tools/bash/sfaos.sh ]; then
-    source /home/$USER/projects/auto/tools/bash/sfaos.sh
+if [ -f /home/$USER/projects/SFA/auto/auto/tools/bash/sfaos.sh ]; then
+    source /home/$USER/projects/SFA/auto/auto/tools/bash/sfaos.sh
 fi
 
 # Source PEM kit bashrc

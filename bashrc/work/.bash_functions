@@ -41,6 +41,11 @@ jenkins-token() {
 #    export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com && bao login -method=token token=$(jq -r --arg u "$USER" '.[$u + "_token"]' /home/$USER/.config/ddn/bao.json)
 #}
 
+function claudegrep()
+{
+    grep -l "$1" ~/.claude/projects/*/*.jsonl | xargs ls -lt
+}
+
 function baoroot()
 {
     export BAO_ADDR=https://openbao.devops.colorado.datadirectnet.com && bao login -method=token token=$(jq -r --arg u root '.[$u + "_token"]' /home/$USER/.config/ddn/bao.json)
@@ -829,11 +834,11 @@ function newalias() {
     fi
 
     # Add the new alias to .bash_aliases
-    echo "alias $alias_name='$alias_command'" >> ~/projects/dotfiles/bashrc/work/.bash_aliases
+    echo "alias $alias_name='$alias_command'" >> ~/projects/BMB/dotfiles/dotfiles/bashrc/work/.bash_aliases
     echo "Alias '$alias_name' added successfully."
 
     # Commit the change
-    cd ~/projects/dotfiles/
+    cd ~/projects/BMB/dotfiles/dotfiles/
     gvc 'new alias: $1'
     cd -
 

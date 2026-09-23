@@ -37,7 +37,7 @@ alias template="sp sfaos;cd janus/test/monty;time py3 frontend.py -e Template"
 alias space="sudo du -h --max-depth=1 | sort -hr"
 
 # Change to monty directory and run Template test
-alias cmt="cd ~/projects/sfaos/janus/test/monty/ && env/venv.sh && time py3 frontend.py -e Template"
+alias cmt="cd ~/projects/SFA/sfaos/sfaos/janus/test/monty/ && env/venv.sh && time py3 frontend.py -e Template"
 
 # Show disk usage of current directory contents, sorted by size
 alias disk="sudo du -shc * | sort -h"
