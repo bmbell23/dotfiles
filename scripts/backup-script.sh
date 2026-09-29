@@ -11,6 +11,7 @@
 #   7. /mnt/boston/media/music/
 #   8. /mnt/boston/media/other/
 # To: /mnt/backups/ (sdc1 - 1TB SSD)
+# Exits non-zero on any failure, with the reason in the log, so a scheduler (Dagu) can alert.
 
 set -euo pipefail
 
@@ -30,7 +31,8 @@ fi
 LOGFILE="$LOG_DIR/backup-$TIMESTAMP.log"
 
 if command -v flock >/dev/null 2>&1; then
-    LOCK_FILE="/tmp/$(basename "$0").lock"
+    # Fixed name: under `ssh proxmox 'bash -s' < script`, $0 is just "bash".
+    LOCK_FILE="/tmp/backup-script.lock"
     exec 9>"$LOCK_FILE"
     if ! flock -n 9; then
         echo "[$(date +%Y-%m-%d\ %H:%M:%S)] ERROR: Another backup-script.sh run is already in progress."
@@ -40,6 +42,25 @@ fi
 
 log() {
     echo "[$(date +%Y-%m-%d\ %H:%M:%S)] $1" | tee -a "$LOGFILE"
+}
+
+# set -e would otherwise exit without saying why (e.g. mkdir on a drive giving I/O errors).
+trap 'rc=$?; log "FAILED: \"$BASH_COMMAND\" exited $rc (line $LINENO), aborting"; exit $rc' ERR
+
+# Preflight check that confirms the mounted destination accepts basic writes.
+preflight_health_check() {
+    local probe_file="$BACKUP_ROOT/.backup-healthcheck-$$"
+    local err
+
+    if ! err=$(: 2>&1 > "$probe_file"); then
+        log "FAILED: Destination is not writable (health-check write failed): $BACKUP_ROOT: $err"
+        return 1
+    fi
+    if ! err=$(rm -f "$probe_file" 2>&1); then
+        log "FAILED: Destination cleanup failed during health-check: $probe_file: $err"
+        return 1
+    fi
+    log "Preflight health-check passed for destination: $BACKUP_ROOT"
 }
 
 run_rsync() {
@@ -80,6 +101,11 @@ fi
 
 if ! mountpoint -q "$BACKUP_ROOT"; then
     log "ERROR: Backup drive not mounted at $BACKUP_ROOT"
+    exit 1
+fi
+
+if ! preflight_health_check; then
+    log "FAILED: Aborting before rsync due to health-check failure"
     exit 1
 fi
 

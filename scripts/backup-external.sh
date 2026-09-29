@@ -2,7 +2,9 @@
 
 # Backup script for External Drive
 # Backs up large media files to /mnt/external/ (2TB external HDD)
-# This runs separately because the external drive may not always be connected
+# This runs separately because the external drive may not always be connected.
+# Exits non-zero on failure so a scheduler (Dagu) can alert. A missing drive counts as a
+# failure unless BACKUP_EXTERNAL_OPTIONAL=1.
 
 set -euo pipefail
 
@@ -28,7 +30,8 @@ LOGFILE="$LOG_DIR/backup-external-$TIMESTAMP.log"
 
 # Acquire lock if flock is available to prevent concurrent runs of this script
 if command -v flock >/dev/null 2>&1; then
-    LOCK_FILE="/tmp/$(basename "$0").lock"
+    # Fixed name: under `ssh proxmox 'bash -s' < script`, $0 is just "bash".
+    LOCK_FILE="/tmp/backup-external.lock"
     exec 9>"$LOCK_FILE"
     if ! flock -n 9; then
         echo "[$(date +%Y-%m-%d\ %H:%M:%S)] ERROR: Another backup-external.sh run is already in progress."
@@ -111,9 +114,13 @@ fi
 
 # Check if external drive is mounted
 if ! mountpoint -q "$BACKUP_ROOT"; then
-    log "WARNING: External drive not mounted at $BACKUP_ROOT"
-    log "Skipping external backup (this is normal if drive is unplugged)"
-    exit 0
+    if [ "${BACKUP_EXTERNAL_OPTIONAL:-0}" = "1" ]; then
+        log "WARNING: External drive not mounted at $BACKUP_ROOT"
+        log "Skipping external backup (BACKUP_EXTERNAL_OPTIONAL=1)"
+        exit 0
+    fi
+    log "FAILED: External drive not mounted at $BACKUP_ROOT, nothing backed up"
+    exit 1
 fi
 
 if [ "$ENABLE_HEALTH_CHECK" = "1" ]; then
