@@ -46,3 +46,5 @@ if [ -d ~/projects/docker/scripts/maintenance ]; then
     alias prep-shutdown='~/projects/docker/scripts/maintenance/prep-shutdown.sh'
     alias verify-boot='~/projects/docker/scripts/maintenance/verify-boot.sh'
 fi
+
+alias GR='cd ~/projects/GreatReads/ && docker compose -p greatreads_ereader -f greatreads/docker-compose.ereader.yml up -d --build'
