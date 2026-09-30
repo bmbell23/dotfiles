@@ -3,3 +3,7 @@ local.sh
 
 # Kanban board files
 .kanban/
+
+# Secrets: sourced by the shell, never committed
+bashrc/conf.d/*secrets*
+secrets.env
