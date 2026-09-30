@@ -39,3 +39,10 @@ alias p='cd ~/projects && clear'
 alias series='reading-list series-stats --finished-only'
 
 alias brt='cd ~/projects/reading_tracker && source venv/bin/activate && source config/shell/.bash_functions && source config/shell/.bash_aliases'
+
+# dockerhost shutdown runbook (docker repo, thread 015): `prep-shutdown` checks now,
+# `prep-shutdown --wait [--notify @brandon]` waits for running work, then snapshots.
+if [ -d ~/projects/docker/scripts/maintenance ]; then
+    alias prep-shutdown='~/projects/docker/scripts/maintenance/prep-shutdown.sh'
+    alias verify-boot='~/projects/docker/scripts/maintenance/verify-boot.sh'
+fi
