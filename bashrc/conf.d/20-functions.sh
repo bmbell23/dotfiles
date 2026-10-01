@@ -116,6 +116,66 @@ gvc() {
 }
 
 # Set project root
+# Open a project in VS Code with its per-project theme. The .code-workspace file lives in
+# ~/.config/vscode-workspaces/, never in the repo (it used to get committed, and copied into
+# every worktree).
+_sp_open_workspace() {
+    local name="$1" dir="$2"
+    command -v code &>/dev/null || return 0
+
+    local theme_name
+    if [ "$name" = "dotfiles" ]; then
+        theme_name="Pretty Pastel"
+    elif [[ "$name" == *"auto"* ]]; then
+        theme_name="mikasa rainbow"
+    elif [[ "$name" == *"sfaos"* ]]; then
+        theme_name="Monokai"
+    else
+        theme_name="Default Dark+"  # fallback theme
+    fi
+
+    local ws_dir="${XDG_CONFIG_HOME:-$HOME/.config}/vscode-workspaces"
+    local workspace_file="$ws_dir/${name}.code-workspace"
+    mkdir -p "$ws_dir"
+    # Rewritten every time, so the theme and path stay current.
+    cat > "$workspace_file" << EOF
+{
+    "folders": [
+        {
+            "path": "${dir}"
+        }
+    ],
+    "name": "${name}",
+    "settings": {
+        "workbench.colorTheme": "${theme_name}",
+        "search.exclude": {
+            "**/node_modules": true,
+            "**/bower_components": true,
+            "**/*.code-search": true,
+            "**/build/**": true,
+            "**/dist/**": true
+        },
+        "files.exclude": {
+            "**/.git": true,
+            "**/.svn": true,
+            "**/.hg": true,
+            "**/CVS": true,
+            "**/.DS_Store": true,
+            "**/Thumbs.db": true
+        },
+        "files.watcherExclude": {
+            "**/.git/objects/**": true,
+            "**/.git/subtree-cache/**": true,
+            "**/node_modules/**": true,
+            "**/build/**": true,
+            "**/dist/**": true
+        }
+    }
+}
+EOF
+    code -n "$workspace_file"
+}
+
 sp() {
     WORKSPACE="/home/$USER/projects/$1"
 
@@ -167,63 +227,7 @@ sp() {
         show_kanban
     fi
 
-    # Look for and launch workspace file, create if missing (only if VS Code is available)
-    if command -v code &>/dev/null; then
-        local workspace_file="${1}.code-workspace"
-        if [ ! -f "$workspace_file" ]; then
-            # Determine theme based on project type only for new workspace files
-            local theme_name
-            if [ "$1" = "dotfiles" ]; then
-                theme_name="Pretty Pastel"
-            elif [[ "$1" == *"auto"* ]]; then
-                theme_name="mikasa rainbow"
-            elif [[ "$1" == *"sfaos"* ]]; then
-                theme_name="Monokai"
-            else
-                theme_name="Default Dark+"  # fallback theme
-            fi
-
-            cat > "${workspace_file}" << EOF
-{
-    "folders": [
-        {
-            "path": "."
-        }
-    ],
-    "name": "${1}",
-    "settings": {
-        "workbench.colorTheme": "${theme_name}",
-        "search.exclude": {
-            "**/node_modules": true,
-            "**/bower_components": true,
-            "**/*.code-search": true,
-            "**/build/**": true,
-            "**/dist/**": true
-        },
-        "files.exclude": {
-            "**/.git": true,
-            "**/.svn": true,
-            "**/.hg": true,
-            "**/CVS": true,
-            "**/.DS_Store": true,
-            "**/Thumbs.db": true
-        },
-        "files.watcherExclude": {
-            "**/.git/objects/**": true,
-            "**/.git/subtree-cache/**": true,
-            "**/node_modules/**": true,
-            "**/build/**": true,
-            "**/dist/**": true
-        }
-    }
-}
-EOF
-            echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
-        fi
-
-        # Launch workspace in VS Code
-        code -n "$workspace_file"
-    fi
+    _sp_open_workspace "$1" "$WORKSPACE"
 }
 
 # Project switching completion without subdirectory support
@@ -402,71 +406,6 @@ function pp() {
     # Save current directory before switching
     local original_dir="$(pwd)"
     sp "${project_name}"
-
-    # Determine theme based on project type
-    local theme_name
-    if [ "${project_name}" = "dotfiles" ]; then
-        theme_name="Pretty Pastel"
-    elif [[ "${project_name}" == *"auto"* ]]; then
-        theme_name="mikasa rainbow"
-    elif [[ "${project_name}" == *"sfaos"* ]]; then
-        theme_name="Monokai"
-    else
-        theme_name="Default Dark+"  # fallback theme
-    fi
-
-    # Look for and launch workspace file, create if missing (only if VS Code is available)
-    if command -v code &>/dev/null; then
-        local workspace_file="${project_name}.code-workspace"
-        if [ ! -f "$workspace_file" ]; then
-            cat > "${workspace_file}" << EOF
-{
-    "folders": [
-        {
-            "path": "."
-        }
-    ],
-    "name": "${project_name}",
-    "settings": {
-        "workbench.colorTheme": "${theme_name}",
-        "search.exclude": {
-            "**/node_modules": true,
-            "**/bower_components": true,
-            "**/*.code-search": true,
-            "**/build/**": true,
-            "**/dist/**": true
-        },
-        "files.exclude": {
-            "**/.git": true,
-            "**/.svn": true,
-            "**/.hg": true,
-            "**/CVS": true,
-            "**/.DS_Store": true,
-            "**/Thumbs.db": true
-        },
-        "files.watcherExclude": {
-            "**/.git/objects/**": true,
-            "**/.git/subtree-cache/**": true,
-            "**/node_modules/**": true,
-            "**/build/**": true,
-            "**/dist/**": true
-        }
-    }
-}
-EOF
-            echo -e "${GREEN}Created new workspace file: ${WHITE}${workspace_file}${RESET}"
-        else
-            # Update existing workspace file's theme
-            sed -i "s/\"workbench.colorTheme\": \".*\"/\"workbench.colorTheme\": \"${theme_name}\"/" "$workspace_file"
-            if ! grep -q "workbench.colorTheme" "$workspace_file"; then
-                # If theme setting doesn't exist, add it to settings object
-                sed -i "/\"settings\": {/a \        \"workbench.colorTheme\": \"${theme_name}\"," "$workspace_file"
-            fi
-        fi
-
-        # Launch workspace in VS Code
-        code -n "$workspace_file"
-    fi
 
     # Don't return to original directory - stay in the selected project
     # cd "$original_dir"  # Remove this line

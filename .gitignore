@@ -7,3 +7,6 @@ local.sh
 # Secrets: sourced by the shell, never committed
 bashrc/conf.d/*secrets*
 secrets.env
+
+# VS Code workspace files: sp/pp keep them in ~/.config/vscode-workspaces/
+*.code-workspace
