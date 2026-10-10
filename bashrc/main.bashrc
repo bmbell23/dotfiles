@@ -324,3 +324,7 @@ if [ -r "$(dirname "${BASH_SOURCE[0]}")/work/.bashrc" ]; then
     source "$(dirname "${BASH_SOURCE[0]}")/work/.bashrc"
 fi
 
+
+### 
+
+alias k3s01='ssh -i ~/projects/agent-bus/data/keys/peter_k3s_ed25519 peter@10.0.0.201'
