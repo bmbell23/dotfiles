@@ -93,6 +93,14 @@ _phone_log() {  # _phone_log <action> <pkg> <result>
     printf '%s\t%s\t%s\t%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" "$2" "$3" >> "$_phone_state/actions.log"
 }
 
+_phone_label() {  # best-effort human name: bloat list, then aliases; Android gives none over adb
+    local pkg="$1" a
+    if [ -n "${PHONE_BLOAT[$pkg]:-}" ]; then echo "${PHONE_BLOAT[$pkg]#*|}"; return; fi
+    for a in "${!PHONE_ALIASES[@]}"; do
+        [ "${PHONE_ALIASES[$a]}" = "$pkg" ] && { echo "$a"; return; }
+    done
+}
+
 phone() {
     local cmd="${1:-help}"
     shift || true
@@ -241,6 +249,44 @@ phone() {
                 echo "Usage: phone dns [<hostname>|off]  (a DoT hostname, e.g. dns.adguard-dns.com; not an IP)"; return 1
             fi
             ;;
+        review)
+            # Enabled apps you installed, plus enabled system apps with a launcher icon. Pick, then `phone rm`.
+            local enabled user launch pkgs=() p tag lines=() picked=() n i
+            enabled=$(_phone_adb shell pm list packages -e | sed 's/^package://') || return 1
+            user=$(_phone_adb shell pm list packages -3 | sed 's/^package://')
+            launch=$(_phone_adb shell cmd package query-activities --brief -a android.intent.action.MAIN \
+                         -c android.intent.category.LAUNCHER | sed -n 's#^ *\([A-Za-z0-9_.]*\)/.*#\1#p')
+            while IFS= read -r p; do
+                grep -qxF "$p" <<< "$enabled" || continue
+                if grep -qxF "$p" <<< "$user"; then tag=user; else tag=system; fi
+                _phone_guarded "$p" && tag="$tag,guarded"
+                lines+=("$(printf '%-48s [%s] %s' "$p" "$tag" "$(_phone_label "$p")")")
+            done < <(printf '%s\n%s\n' "$user" "$launch" | grep . | sort -u)
+            [ ${#lines[@]} -gt 0 ] || { echo "phone: no apps found"; return 1; }
+
+            if command -v fzf &>/dev/null; then
+                mapfile -t picked < <(printf '%s\n' "${lines[@]}" |
+                    fzf --multi --prompt="remove> " --header="TAB marks apps, ENTER removes, ESC cancels" | awk '{print $1}')
+            else
+                for i in "${!lines[@]}"; do printf '%3d) %s\n' $((i + 1)) "${lines[$i]}"; done
+                read -r -p "Numbers to remove (e.g. 3 7 12-15), blank to cancel: " n
+                for i in $n; do
+                    if [[ "$i" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+                        for ((p = BASH_REMATCH[1]; p <= BASH_REMATCH[2]; p++)); do picked+=("${lines[$((p - 1))]%% *}"); done
+                    elif [[ "$i" =~ ^[0-9]+$ ]] && [ "$i" -ge 1 ] && [ "$i" -le ${#lines[@]} ]; then
+                        picked+=("${lines[$((i - 1))]%% *}")
+                    else
+                        echo "phone: skipping '$i' (not a number on the list)" >&2
+                    fi
+                done
+            fi
+            mapfile -t picked < <(printf '%s\n' "${picked[@]}" | grep . | sort -u)
+            [ ${#picked[@]} -gt 0 ] || { echo "phone: nothing picked"; return 0; }
+            printf '  %s\n' "${picked[@]}"
+            read -r -p "Remove these ${#picked[@]} app(s)? (undo any with phone restore) [y/N] " n
+            [[ "$n" == [yY]* ]] || { echo "phone: cancelled"; return 0; }
+            phone rm "${picked[@]}"
+            ;;
         log)
             cat "$_phone_state/actions.log" 2>/dev/null || echo "phone: nothing logged yet"
             ;;
@@ -269,6 +315,7 @@ phone restore <app>...        undo rm (enable, or reinstall the system copy)
 phone debloat <group> [--yes] google | verizon | partner | all: show the plan; --yes removes
 phone speed [0|0.5|1]         animation speed (0 = off, 1 = stock); no value shows it
 phone dns [<host>|off]        Private DNS hostname, or off; no value shows it
+phone review                  pick installed/launcher apps from a list (fzf if installed), then rm
 phone log | aliases           action log / app aliases (add more in ~/.config/phone/config)
 phone sh <cmd>                adb shell; also push, pull, install, logcat, reboot, adb <anything>
 EOF
@@ -283,7 +330,7 @@ EOF
 _phone_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     if [ "$COMP_CWORD" -eq 1 ]; then
-        COMPREPLY=($(compgen -W "pair connect off status apps disabled rm restore debloat speed dns log aliases sh push pull install logcat reboot adb help" -- "$cur"))
+        COMPREPLY=($(compgen -W "pair connect off status apps disabled rm restore debloat review speed dns log aliases sh push pull install logcat reboot adb help" -- "$cur"))
     elif [[ "${COMP_WORDS[1]}" == rm || "${COMP_WORDS[1]}" == restore ]]; then
         COMPREPLY=($(compgen -W "${!PHONE_ALIASES[*]} --force" -- "$cur"))
     elif [[ "${COMP_WORDS[1]}" == debloat ]]; then
