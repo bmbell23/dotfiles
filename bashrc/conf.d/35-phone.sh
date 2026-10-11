@@ -22,8 +22,39 @@ PHONE_GUARD=(
     com.android.systemui
     com.android.settings
     com.google.android.apps.nexuslauncher
+    com.vzw.apnlib
 )
 PHONE_GUARD_REGEX='ims|telephony|carrier|launcher'
+
+# `phone debloat <group>`: package -> "group|what it is". Picked from what's actually on the
+# Pixel 10 Pro Fold (2026-10-11), conservative on purpose: nothing for calls, texts, camera,
+# setup, updates or the launcher. Add or drop entries in ~/.config/phone/config, e.g.
+#     PHONE_BLOAT[com.google.android.apps.photos]="google|Photos"
+#     unset 'PHONE_BLOAT[com.google.android.apps.docs]'
+declare -gA PHONE_BLOAT=(
+    [com.android.chrome]="google|Chrome"
+    [com.google.android.youtube]="google|YouTube"
+    [com.google.android.apps.youtube.music]="google|YouTube Music"
+    [com.google.android.videos]="google|Google TV"
+    [com.google.android.apps.magazines]="google|Google News"
+    [com.google.android.apps.docs]="google|Drive"
+    [com.google.android.apps.bard]="google|Gemini"
+    [com.google.android.apps.tachyon]="google|Meet"
+    [com.google.android.apps.chromecast.app]="google|Google Home"
+    [com.google.android.apps.tips]="google|Pixel Tips"
+    [com.google.android.apps.labs.language.tailwind]="google|NotebookLM"
+    [com.google.android.apps.pixel.creativeassistant]="google|Pixel Studio"
+    [com.google.android.apps.aiwallpapers]="google|AI wallpapers"
+    [com.google.android.apps.emojiwallpaper]="google|Emoji wallpapers"
+    [com.google.android.apps.magicportrait]="google|Magic portrait"
+    [com.google.android.apps.internal.betterbug]="google|Bug reporter"
+    [com.google.android.feedback]="google|Feedback"
+    [com.vzw.hss.myverizon]="verizon|My Verizon"
+    [com.verizon.mips.services]="verizon|Verizon Mobile Intelligence (analytics)"
+    [com.amazon.mShop.android.shopping]="partner|Amazon Shopping"
+    [com.amazon.dee.app]="partner|Alexa"
+    [com.facebook.katana]="partner|Facebook"
+)
 
 _phone_config="${XDG_CONFIG_HOME:-$HOME/.config}/phone/config"
 _phone_state="${XDG_STATE_HOME:-$HOME/.local/state}/phone"
@@ -150,6 +181,36 @@ phone() {
             done
             return $rc
             ;;
+        debloat)
+            local group="" yes=0 a
+            for a in "$@"; do
+                case "$a" in
+                    --yes) yes=1 ;;
+                    google|verizon|partner|all) group="$a" ;;
+                    *) echo "Usage: phone debloat <google|verizon|partner|all> [--yes]" >&2; return 1 ;;
+                esac
+            done
+            [ -n "$group" ] || { echo "Usage: phone debloat <google|verizon|partner|all> [--yes]  (without --yes it only shows the plan)"; return 1; }
+            local enabled todo=() p g label
+            enabled=$(_phone_adb shell pm list packages -e) || return 1
+            for p in $(printf '%s\n' "${!PHONE_BLOAT[@]}" | sort); do
+                g="${PHONE_BLOAT[$p]%%|*}"; label="${PHONE_BLOAT[$p]#*|}"
+                [ "$group" = all ] || [ "$group" = "$g" ] || continue
+                if grep -qx "package:$p" <<< "$enabled"; then
+                    printf '  %-8s %-28s %s\n' "$g" "$label" "$p"
+                    todo+=("$p")
+                fi
+            done
+            if [ ${#todo[@]} -eq 0 ]; then
+                echo "phone: nothing left to remove in '$group' (already gone or disabled)"
+                return 0
+            fi
+            if [ "$yes" -ne 1 ]; then
+                echo "${#todo[@]} app(s) above would be removed. Run again with --yes to do it (undo any with: phone restore <pkg>)."
+                return 0
+            fi
+            phone rm "${todo[@]}"
+            ;;
         log)
             cat "$_phone_state/actions.log" 2>/dev/null || echo "phone: nothing logged yet"
             ;;
@@ -175,6 +236,7 @@ phone apps [filter]           installed packages, optionally filtered
 phone disabled                disabled packages
 phone rm [--force] <app>...   uninstall for user 0, or disable if that's refused; logged
 phone restore <app>...        undo rm (enable, or reinstall the system copy)
+phone debloat <group> [--yes] google | verizon | partner | all: show the plan; --yes removes
 phone log | aliases           action log / app aliases (add more in ~/.config/phone/config)
 phone sh <cmd>                adb shell; also push, pull, install, logcat, reboot, adb <anything>
 EOF
@@ -189,9 +251,11 @@ EOF
 _phone_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     if [ "$COMP_CWORD" -eq 1 ]; then
-        COMPREPLY=($(compgen -W "pair connect off status apps disabled rm restore log aliases sh push pull install logcat reboot adb help" -- "$cur"))
+        COMPREPLY=($(compgen -W "pair connect off status apps disabled rm restore debloat log aliases sh push pull install logcat reboot adb help" -- "$cur"))
     elif [[ "${COMP_WORDS[1]}" == rm || "${COMP_WORDS[1]}" == restore ]]; then
         COMPREPLY=($(compgen -W "${!PHONE_ALIASES[*]} --force" -- "$cur"))
+    elif [[ "${COMP_WORDS[1]}" == debloat ]]; then
+        COMPREPLY=($(compgen -W "google verizon partner all --yes" -- "$cur"))
     fi
 }
 complete -F _phone_complete phone
