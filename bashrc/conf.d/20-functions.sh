@@ -30,6 +30,15 @@ gvc() {
         return 1
     fi
 
+    # Catch up first: merges on GitHub (ship-pr, the reconciler) move origin, and bumping on a
+    # stale branch makes the push fail as diverged. Branches without an upstream skip this.
+    if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' &>/dev/null; then
+        if ! git pull --rebase --autostash; then
+            echo "Error: git pull --rebase failed; sort that out first, nothing was bumped"
+            return 1
+        fi
+    fi
+
     # Check if we have 1 or 2 arguments
     if [ $# -eq 1 ]; then
         # Only message provided, need to auto-increment version
