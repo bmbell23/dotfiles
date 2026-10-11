@@ -871,14 +871,19 @@ function newalias() {
         return 1
     fi
 
+    local dotfiles_dir="${DOTFILES_DIR:-$HOME/projects/dotfiles}"
+    local aliases_file="$dotfiles_dir/bashrc/work/.bash_aliases"
+    if [[ ! -f "$aliases_file" ]]; then
+        echo "Error: $aliases_file not found (set DOTFILES_DIR?)" >&2
+        return 1
+    fi
+
     # Add the new alias to .bash_aliases
-    echo "alias $alias_name='$alias_command'" >> ~/projects/BMB/dotfiles/dotfiles/bashrc/work/.bash_aliases
+    echo "alias $alias_name='$alias_command'" >> "$aliases_file"
     echo "Alias '$alias_name' added successfully."
 
-    # Commit the change
-    cd ~/projects/BMB/dotfiles/dotfiles/
-    gvc 'new alias: $1'
-    cd -
+    # Commit the change from inside dotfiles only (subshell: never gvc in another repo)
+    ( cd "$dotfiles_dir" || exit 1; gvc "new alias: $alias_name" ) || return 1
 
     # Source the .bash_aliases file to make the new alias available immediately
     source ~/.bashrc
