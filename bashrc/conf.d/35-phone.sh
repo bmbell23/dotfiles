@@ -211,6 +211,36 @@ phone() {
             fi
             phone rm "${todo[@]}"
             ;;
+        speed)
+            local k
+            local keys=(window_animation_scale transition_animation_scale animator_duration_scale)
+            if [ -z "${1:-}" ]; then
+                for k in "${keys[@]}"; do printf '%-28s %s\n' "$k" "$(_phone_adb shell settings get global "$k")"; done
+                return
+            fi
+            [[ "$1" =~ ^(0|0\.5|1|1\.5|2)$ ]] || { echo "Usage: phone speed [0|0.5|1]  (0 = no animations, 1 = stock)"; return 1; }
+            for k in "${keys[@]}"; do _phone_adb shell settings put global "$k" "$1" || return 1; done
+            echo "animations: $1"
+            ;;
+        dns)
+            if [ -z "${1:-}" ]; then
+                local mode
+                mode=$(_phone_adb shell settings get global private_dns_mode) || return 1
+                case "$mode" in
+                    hostname) echo "private DNS: $(_phone_adb shell settings get global private_dns_specifier)" ;;
+                    off) echo "private DNS: off" ;;
+                    *) echo "private DNS: automatic (Android default)" ;;
+                esac
+            elif [ "$1" = off ]; then
+                _phone_adb shell settings put global private_dns_mode off && echo "private DNS: off"
+            elif [[ "$1" =~ ^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; then
+                _phone_adb shell settings put global private_dns_specifier "$1" &&
+                    _phone_adb shell settings put global private_dns_mode hostname &&
+                    echo "private DNS: $1"
+            else
+                echo "Usage: phone dns [<hostname>|off]  (a DoT hostname, e.g. dns.adguard-dns.com; not an IP)"; return 1
+            fi
+            ;;
         log)
             cat "$_phone_state/actions.log" 2>/dev/null || echo "phone: nothing logged yet"
             ;;
@@ -237,6 +267,8 @@ phone disabled                disabled packages
 phone rm [--force] <app>...   uninstall for user 0, or disable if that's refused; logged
 phone restore <app>...        undo rm (enable, or reinstall the system copy)
 phone debloat <group> [--yes] google | verizon | partner | all: show the plan; --yes removes
+phone speed [0|0.5|1]         animation speed (0 = off, 1 = stock); no value shows it
+phone dns [<host>|off]        Private DNS hostname, or off; no value shows it
 phone log | aliases           action log / app aliases (add more in ~/.config/phone/config)
 phone sh <cmd>                adb shell; also push, pull, install, logcat, reboot, adb <anything>
 EOF
@@ -251,7 +283,7 @@ EOF
 _phone_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     if [ "$COMP_CWORD" -eq 1 ]; then
-        COMPREPLY=($(compgen -W "pair connect off status apps disabled rm restore debloat log aliases sh push pull install logcat reboot adb help" -- "$cur"))
+        COMPREPLY=($(compgen -W "pair connect off status apps disabled rm restore debloat speed dns log aliases sh push pull install logcat reboot adb help" -- "$cur"))
     elif [[ "${COMP_WORDS[1]}" == rm || "${COMP_WORDS[1]}" == restore ]]; then
         COMPREPLY=($(compgen -W "${!PHONE_ALIASES[*]} --force" -- "$cur"))
     elif [[ "${COMP_WORDS[1]}" == debloat ]]; then
