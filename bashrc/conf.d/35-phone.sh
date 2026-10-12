@@ -107,8 +107,29 @@ _phone_adb() {
     adb -s "$serial" "$@"
 }
 
-_phone_pkg() {  # alias -> package name; anything else passes through
-    echo "${PHONE_ALIASES[$1]:-$1}"
+_phone_pkg() {  # alias, package name, or app name (from `phone names`) -> package name
+    local want="$1" p l exact=() part=()
+    if [ -n "${PHONE_ALIASES[$want]:-}" ]; then echo "${PHONE_ALIASES[$want]}"; return; fi
+    if [[ "$want" == *.* ]]; then echo "$want"; return; fi
+    _phone_load_labels
+    for p in "${!_PHONE_LABELS[@]}"; do
+        l="${_PHONE_LABELS[$p]}"
+        if [ "${l,,}" = "${want,,}" ]; then exact+=("$p")
+        elif [[ "${l,,}" == *"${want,,}"* ]]; then part+=("$p"); fi
+    done
+    [ ${#exact[@]} -eq 0 ] && exact=("${part[@]}")
+    if [ ${#exact[@]} -eq 1 ]; then
+        echo "phone: '$want' = ${_PHONE_LABELS[${exact[0]}]} (${exact[0]})" >&2
+        echo "${exact[0]}"
+        return
+    fi
+    if [ ${#exact[@]} -eq 0 ]; then
+        echo "phone: no app called '$want' (try: phone apps $want; names come from 'phone names')" >&2
+    else
+        echo "phone: '$want' matches ${#exact[@]} apps, be more specific:" >&2
+        for p in "${exact[@]}"; do echo "  ${_PHONE_LABELS[$p]}  ($p)" >&2; done
+    fi
+    return 1
 }
 
 _phone_guarded() {
@@ -207,10 +228,10 @@ phone() {
             ;;
         rm)
             [ "${1:-}" = "--force" ] && { force=1; shift; }
-            [ $# -gt 0 ] || { echo "Usage: phone rm [--force] <pkg|alias>..."; return 1; }
+            [ $# -gt 0 ] || { echo "Usage: phone rm [--force] <app name|pkg|alias>..."; return 1; }
             local rc=0
             for pkg in "$@"; do
-                pkg=$(_phone_pkg "$pkg")
+                pkg=$(_phone_pkg "$pkg") || { rc=1; continue; }
                 if _phone_guarded "$pkg" && [ "$force" -ne 1 ]; then
                     echo "phone: refusing $pkg (guarded: calls/texts/system). Use --force if you're sure." >&2
                     rc=1; continue
@@ -236,10 +257,10 @@ phone() {
             return $rc
             ;;
         restore)
-            [ $# -gt 0 ] || { echo "Usage: phone restore <pkg|alias>..."; return 1; }
+            [ $# -gt 0 ] || { echo "Usage: phone restore <app name|pkg|alias>..."; return 1; }
             local rc=0
             for pkg in "$@"; do
-                pkg=$(_phone_pkg "$pkg")
+                pkg=$(_phone_pkg "$pkg") || { rc=1; continue; }
                 if _phone_adb shell pm list packages -d | grep -qx "package:$pkg"; then
                     out=$(_phone_adb shell pm enable --user 0 "$pkg" 2>&1)
                     [[ "$out" == *"new state: enabled"* ]] && { _phone_log enable "$pkg" ok; echo "$pkg: enabled"; continue; }
@@ -366,7 +387,7 @@ phone off | status            disconnect / show connection
 phone apps [filter]           your apps (installed + launcher icons) with names; --all for every package
 phone names [--refresh]       look up real app names once (cached); apps and review use them
 phone disabled                disabled packages
-phone rm [--force] <app>...   uninstall for user 0, or disable if that's refused; logged
+phone rm [--force] <app>...   app = name ("aloha"), package or alias; uninstall for user 0, or disable if that's refused; logged
 phone restore <app>...        undo rm (enable, or reinstall the system copy)
 phone debloat <group> [--yes] google | verizon | partner | all: show the plan; --yes removes
 phone speed [0|0.5|1]         animation speed (0 = off, 1 = stock); no value shows it
