@@ -177,6 +177,30 @@ phone() {
             echo "$out"
             [[ "$out" == *"connected to"* ]]
             ;;
+        reconnect)
+            # Wireless debugging picks a new port whenever it's toggled; find it by scanning, then connect.
+            [ -n "${PHONE_HOST:-}" ] || { echo "phone: set PHONE_HOST in $_phone_config" >&2; return 1; }
+            local range="${PHONE_PORT_RANGE:-30000-49999}" open n
+            echo "phone: scanning $PHONE_HOST ports $range for Wireless debugging..."
+            open=$(seq "${range%-*}" "${range#*-}" |
+                xargs -P 200 -I{} sh -c "nc -z -w1 '$PHONE_HOST' {} 2>/dev/null && echo {}" | sort -n)
+            if [ -z "$open" ]; then
+                echo "phone: no open ports on $PHONE_HOST. Is Wireless debugging on (and the phone on Tailscale)?" >&2
+                return 1
+            fi
+            # Usually one port; the pairing dialog (or another service) can add more, so try each.
+            for n in $open; do
+                if adb connect "$PHONE_HOST:$n" 2>&1 | grep -q "connected to" &&
+                   [ "$(adb -s "$PHONE_HOST:$n" get-state 2>/dev/null)" = device ]; then
+                    mkdir -p "$_phone_state"; echo "$n" > "$_phone_state/port"
+                    echo "phone: connected on port $n"
+                    return 0
+                fi
+                adb disconnect "$PHONE_HOST:$n" &>/dev/null
+            done
+            echo "phone: open port(s) ${open//$'\n'/ } but none accepted adb. Check Wireless debugging; if it was reset, re-pair: phone pair <port> <code>" >&2
+            return 1
+            ;;
         off)
             local serial
             serial=$(_phone_serial) || return 1
@@ -383,6 +407,7 @@ phone() {
             cat << 'EOF'
 phone pair <port> <code>      pair (Wireless debugging → Pair device with pairing code)
 phone connect [port]          connect; the port is remembered (it changes on every toggle)
+phone reconnect               the port moved? scan for it and connect (PHONE_PORT_RANGE, default 30000-49999)
 phone off | status            disconnect / show connection
 phone apps [filter]           your apps (installed + launcher icons) with names; --all for every package
 phone names [--refresh]       look up real app names once (cached); apps and review use them
