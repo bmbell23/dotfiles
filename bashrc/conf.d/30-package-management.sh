@@ -2,7 +2,7 @@
 
 # Package management functions
 pkg() {
-    local dotfiles_dir="${HOME}/projects/BMB/dotfiles/dotfiles"
+    local dotfiles_dir="${DOTFILES_DIR:-$HOME/projects/dotfiles}"
     local packages_script="${dotfiles_dir}/packages/install_packages.sh"
     
     case "$1" in
@@ -44,7 +44,7 @@ complete -F _pkg_complete pkg
 
 # Cron management functions
 cron() {
-    local dotfiles_dir="${HOME}/projects/BMB/dotfiles/dotfiles"
+    local dotfiles_dir="${DOTFILES_DIR:-$HOME/projects/dotfiles}"
     local cron_script="${dotfiles_dir}/scripts/cron/install_crons.sh"
     
     case "$1" in
