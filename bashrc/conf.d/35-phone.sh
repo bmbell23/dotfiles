@@ -58,6 +58,37 @@ declare -gA PHONE_BLOAT=(
 
 _phone_config="${XDG_CONFIG_HOME:-$HOME/.config}/phone/config"
 _phone_state="${XDG_STATE_HOME:-$HOME/.local/state}/phone"
+_phone_scripts="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../scripts/phone" 2>/dev/null && pwd)"
+declare -gA _PHONE_LABELS=()
+
+_phone_load_labels() {  # ~/.local/state/phone/labels.tsv (pkg<TAB>name), written by `phone names`
+    local p l
+    _PHONE_LABELS=()
+    [ -f "$_phone_state/labels.tsv" ] || return 0
+    while IFS=$'\t' read -r p l; do [ -n "$l" ] && _PHONE_LABELS[$p]="$l"; done < "$_phone_state/labels.tsv"
+}
+
+_phone_userfacing() {  # "pkg<TAB>tag" for enabled apps you installed + enabled system apps with a launcher icon
+    local enabled user launch p tag
+    enabled=$(_phone_adb shell pm list packages -e | sed 's/^package://') || return 1
+    user=$(_phone_adb shell pm list packages -3 | sed 's/^package://')
+    launch=$(_phone_adb shell cmd package query-activities --brief -a android.intent.action.MAIN \
+                 -c android.intent.category.LAUNCHER | sed -n 's#^ *\([A-Za-z0-9_.]*\)/.*#\1#p')
+    while IFS= read -r p; do
+        grep -qxF "$p" <<< "$enabled" || continue
+        if grep -qxF "$p" <<< "$user"; then tag=user; else tag=system; fi
+        _phone_guarded "$p" && tag="$tag,guarded"
+        printf '%s\t%s\n' "$p" "$tag"
+    done < <(printf '%s\n%s\n' "$user" "$launch" | grep . | sort -u)
+}
+
+_phone_lines() {  # _phone_userfacing output -> display lines: "pkg  [tag] name", sorted by name
+    local p tag
+    _phone_load_labels
+    while IFS=$'\t' read -r p tag; do
+        printf '%-44s %-16s %s\n' "$p" "[$tag]" "$(_phone_label "$p")"
+    done | sort -t']' -k2,2f
+}
 [ -f "$_phone_config" ] && source "$_phone_config"
 
 _phone_serial() {
@@ -93,8 +124,9 @@ _phone_log() {  # _phone_log <action> <pkg> <result>
     printf '%s\t%s\t%s\t%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" "$2" "$3" >> "$_phone_state/actions.log"
 }
 
-_phone_label() {  # best-effort human name: bloat list, then aliases; Android gives none over adb
+_phone_label() {  # human name: `phone names` cache, then the bloat list, then aliases
     local pkg="$1" a
+    if [ -n "${_PHONE_LABELS[$pkg]:-}" ]; then echo "${_PHONE_LABELS[$pkg]}"; return; fi
     if [ -n "${PHONE_BLOAT[$pkg]:-}" ]; then echo "${PHONE_BLOAT[$pkg]#*|}"; return; fi
     for a in "${!PHONE_ALIASES[@]}"; do
         [ "${PHONE_ALIASES[$a]}" = "$pkg" ] && { echo "$a"; return; }
@@ -136,7 +168,39 @@ phone() {
             adb devices -l | grep -F "$serial" || true
             ;;
         apps)
-            _phone_adb shell pm list packages | sed 's/^package://' | grep -i -- "${1:-.}" | sort
+            # Default: just the apps you'd recognise, with names. --all: every package (450+, mostly internals).
+            if [ "${1:-}" = "--all" ]; then
+                _phone_adb shell pm list packages | sed 's/^package://' | grep -i -- "${2:-.}" | sort
+                return
+            fi
+            _phone_userfacing | _phone_lines | grep -i -- "${1:-.}"
+            [ -s "$_phone_state/labels.tsv" ] || echo "(no names yet: run 'phone names' once)" >&2
+            ;;
+        names)
+            # Real app names, read from each APK's manifest + resources (only those two files leave the phone).
+            local venv="${XDG_DATA_HOME:-$HOME/.local/share}/phone/venv" serial todo p n
+            serial=$(_phone_serial) || return 1
+            if [ ! -x "$venv/bin/python" ] || ! "$venv/bin/python" -c 'import androguard' 2>/dev/null; then
+                echo "phone: one-time setup, installing androguard into $venv"
+                python3 -m venv "$venv" && "$venv/bin/pip" install -q androguard || return 1
+            fi
+            mkdir -p "$_phone_state"; touch "$_phone_state/labels.tsv"
+            _phone_load_labels
+            if [ "${1:-}" = "--refresh" ]; then
+                todo=$(_phone_userfacing | cut -f1)
+            else
+                todo=$(_phone_userfacing | cut -f1 | while read -r p; do [ -n "${_PHONE_LABELS[$p]:-}" ] || echo "$p"; done)
+            fi
+            [ -n "$todo" ] || { echo "phone: all names already known ('phone names --refresh' to redo)"; return 0; }
+            echo "phone: reading names for $(wc -l <<< "$todo") app(s), ~3 s each..."
+            "$venv/bin/python" "$_phone_scripts/phone-labels.py" "$serial" <<< "$todo" |
+                while IFS=$'\t' read -r p n; do printf '%s\t%s\n' "$p" "$n"; [ -n "$n" ] && echo "  $n  ($p)" >&2; done \
+                > "$_phone_state/labels.new" || return 1
+            # Keep the new rows, plus old rows for packages not looked up this time.
+            { cat "$_phone_state/labels.new"; grep -vFf <(cut -f1 "$_phone_state/labels.new" | sed 's/$/\t/') "$_phone_state/labels.tsv"; } |
+                sort -u > "$_phone_state/labels.tsv.tmp" && mv "$_phone_state/labels.tsv.tmp" "$_phone_state/labels.tsv"
+            rm -f "$_phone_state/labels.new"
+            echo "phone: $(grep -c $'\t.' "$_phone_state/labels.tsv") names cached in $_phone_state/labels.tsv"
             ;;
         disabled)
             _phone_adb shell pm list packages -d | sed 's/^package://' | sort
@@ -251,17 +315,8 @@ phone() {
             ;;
         review)
             # Enabled apps you installed, plus enabled system apps with a launcher icon. Pick, then `phone rm`.
-            local enabled user launch pkgs=() p tag lines=() picked=() n i
-            enabled=$(_phone_adb shell pm list packages -e | sed 's/^package://') || return 1
-            user=$(_phone_adb shell pm list packages -3 | sed 's/^package://')
-            launch=$(_phone_adb shell cmd package query-activities --brief -a android.intent.action.MAIN \
-                         -c android.intent.category.LAUNCHER | sed -n 's#^ *\([A-Za-z0-9_.]*\)/.*#\1#p')
-            while IFS= read -r p; do
-                grep -qxF "$p" <<< "$enabled" || continue
-                if grep -qxF "$p" <<< "$user"; then tag=user; else tag=system; fi
-                _phone_guarded "$p" && tag="$tag,guarded"
-                lines+=("$(printf '%-48s [%s] %s' "$p" "$tag" "$(_phone_label "$p")")")
-            done < <(printf '%s\n%s\n' "$user" "$launch" | grep . | sort -u)
+            local p lines=() picked=() n i
+            mapfile -t lines < <(_phone_userfacing | _phone_lines)
             [ ${#lines[@]} -gt 0 ] || { echo "phone: no apps found"; return 1; }
 
             if command -v fzf &>/dev/null; then
@@ -308,7 +363,8 @@ phone() {
 phone pair <port> <code>      pair (Wireless debugging → Pair device with pairing code)
 phone connect [port]          connect; the port is remembered (it changes on every toggle)
 phone off | status            disconnect / show connection
-phone apps [filter]           installed packages, optionally filtered
+phone apps [filter]           your apps (installed + launcher icons) with names; --all for every package
+phone names [--refresh]       look up real app names once (cached); apps and review use them
 phone disabled                disabled packages
 phone rm [--force] <app>...   uninstall for user 0, or disable if that's refused; logged
 phone restore <app>...        undo rm (enable, or reinstall the system copy)
@@ -330,7 +386,7 @@ EOF
 _phone_complete() {
     local cur="${COMP_WORDS[COMP_CWORD]}"
     if [ "$COMP_CWORD" -eq 1 ]; then
-        COMPREPLY=($(compgen -W "pair connect off status apps disabled rm restore debloat review speed dns log aliases sh push pull install logcat reboot adb help" -- "$cur"))
+        COMPREPLY=($(compgen -W "pair connect off status apps names disabled rm restore debloat review speed dns log aliases sh push pull install logcat reboot adb help" -- "$cur"))
     elif [[ "${COMP_WORDS[1]}" == rm || "${COMP_WORDS[1]}" == restore ]]; then
         COMPREPLY=($(compgen -W "${!PHONE_ALIASES[*]} --force" -- "$cur"))
     elif [[ "${COMP_WORDS[1]}" == debloat ]]; then
