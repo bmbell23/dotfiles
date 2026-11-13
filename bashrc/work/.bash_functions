@@ -35,6 +35,86 @@ jenkins-token() {
     echo "JENKINS_TOKEN set (${#v} chars, …${v: -4})"
 }
 
+# AWS console logins (aws login --remote), DO-1409.
+#   aws-login                  default and exascaler
+#   aws-login exascaler        just the named profile(s)
+#   aws-whoami [profile ...]   one line per profile: ARN, or why it's not usable
+# Region is $AWS_REGION, else us-west-1: ~/.aws/config sets none on these
+# profiles, and sts/login refuse to run without one. The aws CLI is only on
+# co-sf-pe-042 (/usr/local/bin/aws), so both functions bail out cleanly elsewhere.
+_aws_default_profiles=(default exascaler)
+
+# _aws_check PROFILE REGION: print the caller ARN and succeed, or print the
+# CLI's reason (minus its "aws: [ERROR]: " prefix) and fail.
+_aws_check()
+{
+    local out
+    if out=$(aws sts get-caller-identity --profile "$1" --region "$2" \
+                 --query Arn --output text --no-cli-pager 2>&1); then
+        printf '%s\n' "$out"
+        return 0
+    fi
+    printf '%s\n' "$out" | sed -e 's/^aws: \[ERROR\]: //' -e '/^[[:space:]]*$/d' | tail -n1
+    return 1
+}
+
+_aws_have_cli()
+{
+    command -v aws >/dev/null 2>&1 && return 0
+    echo "$1: aws CLI not found on PATH (it's installed on co-sf-pe-042)" >&2
+    return 1
+}
+
+function aws-login()
+{
+    _aws_have_cli aws-login || return 1
+    local region="${AWS_REGION:-us-west-1}"
+    local profiles=("$@") p out rc=0
+    [ ${#profiles[@]} -gt 0 ] || profiles=("${_aws_default_profiles[@]}")
+
+    for p in "${profiles[@]}"; do
+        if out=$(_aws_check "$p" "$region"); then
+            echo "$p: still valid, $out"
+            continue
+        fi
+        echo
+        echo "$p: $out"
+        echo "$p: logging in (region $region)."
+        echo "  Open the URL below and paste the code from THIS run."
+        echo "  A code from an earlier attempt fails with a state mismatch."
+        if ! aws login --remote --profile "$p" --region "$region"; then
+            echo "aws-login: login for $p failed" >&2
+            rc=1
+            continue
+        fi
+        if out=$(_aws_check "$p" "$region"); then
+            echo "$p: logged in, $out"
+        else
+            echo "aws-login: $p logged in, but sts still fails: $out" >&2
+            rc=1
+        fi
+    done
+    return $rc
+}
+
+function aws-whoami()
+{
+    _aws_have_cli aws-whoami || return 1
+    local region="${AWS_REGION:-us-west-1}"
+    local profiles=("$@") p out rc=0
+    [ ${#profiles[@]} -gt 0 ] || profiles=("${_aws_default_profiles[@]}")
+
+    for p in "${profiles[@]}"; do
+        if out=$(_aws_check "$p" "$region"); then
+            printf '%-10s valid    %s\n' "$p" "$out"
+        else
+            printf '%-10s INVALID  %s  (aws-login %s)\n' "$p" "$out" "$p"
+            rc=1
+        fi
+    done
+    return $rc
+}
+
 # Function: Log in to OpenBao
 #function baome()
 #{
