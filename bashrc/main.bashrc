@@ -1,10 +1,15 @@
 # .bashrc
 
-# Color definitions
-RED=$(tput setaf 1)
-GREEN=$(tput setaf 2)
-YELLOW=$(tput setaf 3)
-NC=$(tput sgr0)
+# Color definitions: only with a terminal. Non-interactive shells (ssh host cmd,
+# rsync/scp, agent shells) have no $TERM, and a bare tput prints
+# "tput: No value for $TERM" on stderr each time; there the colors are empty.
+RED="" GREEN="" YELLOW="" NC=""
+if [ -t 1 ] && command -v tput >/dev/null 2>&1; then
+    RED=$(tput setaf 1 2>/dev/null)
+    GREEN=$(tput setaf 2 2>/dev/null)
+    YELLOW=$(tput setaf 3 2>/dev/null)
+    NC=$(tput sgr0 2>/dev/null)
+fi
 
 # Projects directory configuration - can be overridden in user's personal bashrc
 if [ -z "$PROJECTS_DIR" ]; then
